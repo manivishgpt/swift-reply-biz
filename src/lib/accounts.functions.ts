@@ -32,7 +32,20 @@ export const requestQr = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { bridge } = await import("./bridge.server");
-    // Always reset so user gets a fresh QR to scan
+    // Only force a reset (which wipes credentials and logs the previous
+    // session out) when the account is NOT already connected. For a connected
+    // account we just ask the bridge for the current QR / status instead of
+    // destroying its session.
+    const { data: acct } = await context.supabase
+      .from("wa_accounts")
+      .select("status")
+      .eq("id", data.accountId)
+      .single();
+    const isConnected = acct?.status === "connected";
+    if (isConnected) {
+      console.log("[requestQr] account already connected, skipping reset", { accountId: data.accountId });
+      return await bridge.getQr(data.accountId);
+    }
     await bridge.startSession(data.accountId, { reset: true });
     await context.supabase
       .from("wa_accounts")
