@@ -4,7 +4,18 @@ import { createHmac, timingSafeEqual } from "crypto";
 const BRIDGE_BASE_URL = process.env.BRIDGE_BASE_URL;
 const BRIDGE_SHARED_SECRET = process.env.BRIDGE_SHARED_SECRET;
 
+let configLogged = false;
+function logConfigOnce() {
+  if (configLogged) return;
+  configLogged = true;
+  console.log("[bridge] config", {
+    bridgeBaseUrl: BRIDGE_BASE_URL || "(unset)",
+    hasSharedSecret: Boolean(BRIDGE_SHARED_SECRET),
+  });
+}
+
 function requireBridge() {
+  logConfigOnce();
   if (!BRIDGE_BASE_URL || !BRIDGE_SHARED_SECRET) {
     throw new Error(
       "Bridge is not configured. Set BRIDGE_BASE_URL and BRIDGE_SHARED_SECRET in project secrets, and deploy your Baileys bridge.",
