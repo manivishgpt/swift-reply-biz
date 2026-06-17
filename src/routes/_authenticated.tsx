@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox, Users, Phone, Settings, MessageSquare, LogOut, Megaphone, Bot } from "lucide-react";
+import { Inbox, Users, Phone, Settings, MessageSquare, LogOut, Megaphone, Bot, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 const nav = [
   { to: "/app", label: "Dashboard", icon: MessageSquare },
+  { to: "/setup", label: "Setup wizard", icon: Sparkles },
   { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/contacts", label: "Contacts", icon: Users },
   { to: "/accounts", label: "WhatsApp accounts", icon: Phone },
