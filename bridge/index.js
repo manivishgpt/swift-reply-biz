@@ -26,9 +26,60 @@ if (!BRIDGE_SHARED_SECRET) {
   console.warn("WARNING: BRIDGE_SHARED_SECRET environment variable is not set!");
 }
 
+// Force stdout to be unbuffered/synchronous so Docker `docker logs` shows
+// every line immediately instead of batching them behind pino's JSON output.
+try {
+  if (process.stdout._handle && typeof process.stdout._handle.setBlocking === 'function') {
+    process.stdout._handle.setBlocking(true);
+  }
+  if (process.stderr._handle && typeof process.stderr._handle.setBlocking === 'function') {
+    process.stderr._handle.setBlocking(true);
+  }
+} catch {}
+
+// Direct, formatted writers that bypass any logger and always hit stdout.
+function logBlock(lines) {
+  process.stdout.write('\n' + lines.join('\n') + '\n');
+}
+
+function logIncomingMessage({ accountId, phone, jid, pushName, type, body, ts }) {
+  logBlock([
+    '========================',
+    'INCOMING MESSAGE',
+    '================',
+    '',
+    `Account ID : ${accountId}`,
+    `From Phone : ${phone}`,
+    `From JID   : ${jid}`,
+    `Push Name  : ${pushName || '(unknown)'}`,
+    `Type       : ${type}`,
+    `Message    : ${(body ?? '').toString().slice(0, 1000)}`,
+    `Time       : ${ts}`,
+    '=================================',
+  ]);
+}
+
+function logOutgoingMessage({ accountId, fromPhone, toPhone, type, body, ts }) {
+  logBlock([
+    '========================',
+    'OUTGOING MESSAGE',
+    '================',
+    '',
+    `Account ID : ${accountId}`,
+    `From Phone : ${fromPhone}`,
+    `To Phone   : ${toPhone}`,
+    `Type       : ${type}`,
+    `Message    : ${(body ?? '').toString().slice(0, 1000)}`,
+    `Time       : ${ts}`,
+    '=================================',
+  ]);
+}
+
 // In-memory active sockets and QR states
 const sessions = {};
-const logger = pino({ level: 'info' });
+// Baileys is very chatty at 'info'. Quiet it to 'warn' so our INCOMING/OUTGOING
+// blocks are not buried under hundreds of JSON lines in Docker logs.
+const logger = pino({ level: process.env.BAILEYS_LOG_LEVEL || 'warn' });
 let sendEndpointHitCount = 0;
 
 // Global request tracer — logs EVERY hit, even before signature verification.
