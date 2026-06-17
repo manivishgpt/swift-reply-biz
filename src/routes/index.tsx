@@ -83,8 +83,9 @@ function Index() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-6 py-6 text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Wapix
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 text-sm text-muted-foreground">
+          <span>© {new Date().getFullYear()} Wapix</span>
+          <Link to="/install" className="hover:text-foreground">Self-host install</Link>
         </div>
       </footer>
     </div>
