@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/public/wa/message")({
   },
 });
 
-type AdminClient = Awaited<ReturnType<typeof import("@/integrations/supabase/client.server")>>["supabaseAdmin"];
+type AdminClient = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
 async function runAutoReply(args: {
   accountId: string;
@@ -142,8 +142,8 @@ async function runAutoReply(args: {
     }
     if (!pattern) continue;
     if (r.trigger_type === "keyword") {
-      const kws = pattern.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean);
-      if (kws.some((k) => lower.includes(k))) {
+      const kws = pattern.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean);
+      if (kws.some((k: string) => lower.includes(k))) {
         reply = r.response_template;
         break;
       }
