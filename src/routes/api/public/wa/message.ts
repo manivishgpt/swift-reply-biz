@@ -27,8 +27,24 @@ export const Route = createFileRoute("/api/public/wa/message")({
         try {
           parsed = Payload.parse(JSON.parse(raw));
         } catch (e) {
+          console.error("[wa/message] bad payload", (e as Error).message, raw.slice(0, 500));
           return new Response("Bad request", { status: 400 });
         }
+
+        const isGroup = parsed.from.endsWith("@g.us");
+        console.log("[wa/message] incoming", {
+          accountId: parsed.accountId,
+          from: parsed.from,
+          fromName: parsed.fromName ?? null,
+          fromPhone: parsed.fromPhone ?? null,
+          type: parsed.type,
+          isGroup,
+          waMessageId: parsed.waMessageId ?? null,
+          timestamp: parsed.timestamp ?? null,
+          body: parsed.body ?? null,
+          bodyLen: parsed.body?.length ?? 0,
+          mediaUrl: parsed.mediaUrl ?? null,
+        });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -86,7 +102,10 @@ export const Route = createFileRoute("/api/public/wa/message")({
 
         // Auto-reply pipeline (rule engine + AI fallback)
         try {
-          if (!parsed.from.endsWith("@g.us")) {
+          if (isGroup) {
+            console.log("[wa/message] skip auto-reply (group chat)", { from: parsed.from });
+          } else {
+            console.log("[wa/message] running auto-reply", { from: parsed.from, conversationId: convRow.id });
             await runAutoReply({
             accountId: parsed.accountId,
             conversationId: convRow.id,
