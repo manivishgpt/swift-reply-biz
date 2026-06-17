@@ -538,6 +538,24 @@ function AdminStep({
 /* ---------------------------------- Done ---------------------------------- */
 function DoneStep() {
   const navigate = useNavigate();
+  const [locking, setLocking] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const lockFn = useServerFn(lockInstaller);
+
+  async function lock() {
+    if (!window.confirm("Lock the installer permanently? After this, nobody can re-run the wizard from /install. You must be signed in as admin.")) return;
+    setLocking(true);
+    try {
+      await lockFn();
+      setLocked(true);
+      toast.success("Installer locked");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to lock");
+    } finally {
+      setLocking(false);
+    }
+  }
+
   return (
     <Card className="p-8 text-center">
       <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -550,6 +568,30 @@ function DoneStep() {
       <div className="mt-6 flex justify-center gap-2">
         <Button onClick={() => navigate({ to: "/auth" })}>Sign in</Button>
         <Button variant="outline" onClick={() => navigate({ to: "/" })}>Go home</Button>
+      </div>
+
+      <div className="mt-8 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-left">
+        <div className="flex items-start gap-3">
+          <Lock className="mt-0.5 h-5 w-5 text-destructive" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Lock the installer</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Recommended for production. Permanently disables <code>/install</code> so nobody else
+              can re-run the wizard or change secrets through it. You must be signed in as admin.
+              Reversible only via a direct database edit.
+            </p>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="mt-3"
+              onClick={lock}
+              disabled={locking || locked}
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              {locked ? "Locked" : locking ? "Locking…" : "Lock installer"}
+            </Button>
+          </div>
+        </div>
       </div>
     </Card>
   );
