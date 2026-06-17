@@ -24,7 +24,11 @@ import { Route as ApiPublicWaStatusRouteImport } from './routes/api/public/wa/st
 import { Route as ApiPublicWaMessageRouteImport } from './routes/api/public/wa/message'
 import { Route as ApiPublicWaDeliveryRouteImport } from './routes/api/public/wa/delivery'
 import { Route as ApiPublicV1MessagesRouteImport } from './routes/api/public/v1/messages'
+import { Route as ApiPublicV1AccountsRouteImport } from './routes/api/public/v1/accounts'
 import { Route as ApiPublicV1AuthVerifyRouteImport } from './routes/api/public/v1/auth.verify'
+import { Route as ApiPublicV1AccountsAccountIdStatusRouteImport } from './routes/api/public/v1/accounts.$accountId.status'
+import { Route as ApiPublicV1AccountsAccountIdDisconnectRouteImport } from './routes/api/public/v1/accounts.$accountId.disconnect'
+import { Route as ApiPublicV1AccountsAccountIdConnectRouteImport } from './routes/api/public/v1/accounts.$accountId.connect'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -100,11 +104,34 @@ const ApiPublicV1MessagesRoute = ApiPublicV1MessagesRouteImport.update({
   path: '/api/public/v1/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1AccountsRoute = ApiPublicV1AccountsRouteImport.update({
+  id: '/api/public/v1/accounts',
+  path: '/api/public/v1/accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1AuthVerifyRoute = ApiPublicV1AuthVerifyRouteImport.update({
   id: '/api/public/v1/auth/verify',
   path: '/api/public/v1/auth/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1AccountsAccountIdStatusRoute =
+  ApiPublicV1AccountsAccountIdStatusRouteImport.update({
+    id: '/$accountId/status',
+    path: '/$accountId/status',
+    getParentRoute: () => ApiPublicV1AccountsRoute,
+  } as any)
+const ApiPublicV1AccountsAccountIdDisconnectRoute =
+  ApiPublicV1AccountsAccountIdDisconnectRouteImport.update({
+    id: '/$accountId/disconnect',
+    path: '/$accountId/disconnect',
+    getParentRoute: () => ApiPublicV1AccountsRoute,
+  } as any)
+const ApiPublicV1AccountsAccountIdConnectRoute =
+  ApiPublicV1AccountsAccountIdConnectRouteImport.update({
+    id: '/$accountId/connect',
+    path: '/$accountId/connect',
+    getParentRoute: () => ApiPublicV1AccountsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -117,11 +144,15 @@ export interface FileRoutesByFullPath {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
   '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
   '/api/public/v1/auth/verify': typeof ApiPublicV1AuthVerifyRoute
+  '/api/public/v1/accounts/$accountId/connect': typeof ApiPublicV1AccountsAccountIdConnectRoute
+  '/api/public/v1/accounts/$accountId/disconnect': typeof ApiPublicV1AccountsAccountIdDisconnectRoute
+  '/api/public/v1/accounts/$accountId/status': typeof ApiPublicV1AccountsAccountIdStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -134,11 +165,15 @@ export interface FileRoutesByTo {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
   '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
   '/api/public/v1/auth/verify': typeof ApiPublicV1AuthVerifyRoute
+  '/api/public/v1/accounts/$accountId/connect': typeof ApiPublicV1AccountsAccountIdConnectRoute
+  '/api/public/v1/accounts/$accountId/disconnect': typeof ApiPublicV1AccountsAccountIdDisconnectRoute
+  '/api/public/v1/accounts/$accountId/status': typeof ApiPublicV1AccountsAccountIdStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -153,11 +188,15 @@ export interface FileRoutesById {
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
   '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
   '/api/public/v1/auth/verify': typeof ApiPublicV1AuthVerifyRoute
+  '/api/public/v1/accounts/$accountId/connect': typeof ApiPublicV1AccountsAccountIdConnectRoute
+  '/api/public/v1/accounts/$accountId/disconnect': typeof ApiPublicV1AccountsAccountIdDisconnectRoute
+  '/api/public/v1/accounts/$accountId/status': typeof ApiPublicV1AccountsAccountIdStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -172,11 +211,15 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/v1/accounts'
     | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
     | '/api/public/v1/auth/verify'
+    | '/api/public/v1/accounts/$accountId/connect'
+    | '/api/public/v1/accounts/$accountId/disconnect'
+    | '/api/public/v1/accounts/$accountId/status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -189,11 +232,15 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/v1/accounts'
     | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
     | '/api/public/v1/auth/verify'
+    | '/api/public/v1/accounts/$accountId/connect'
+    | '/api/public/v1/accounts/$accountId/disconnect'
+    | '/api/public/v1/accounts/$accountId/status'
   id:
     | '__root__'
     | '/'
@@ -207,17 +254,22 @@ export interface FileRouteTypes {
     | '/_authenticated/rules'
     | '/_authenticated/settings'
     | '/_authenticated/contacts/$id'
+    | '/api/public/v1/accounts'
     | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
     | '/api/public/v1/auth/verify'
+    | '/api/public/v1/accounts/$accountId/connect'
+    | '/api/public/v1/accounts/$accountId/disconnect'
+    | '/api/public/v1/accounts/$accountId/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicV1AccountsRoute: typeof ApiPublicV1AccountsRouteWithChildren
   ApiPublicV1MessagesRoute: typeof ApiPublicV1MessagesRoute
   ApiPublicWaDeliveryRoute: typeof ApiPublicWaDeliveryRoute
   ApiPublicWaMessageRoute: typeof ApiPublicWaMessageRoute
@@ -332,12 +384,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/accounts': {
+      id: '/api/public/v1/accounts'
+      path: '/api/public/v1/accounts'
+      fullPath: '/api/public/v1/accounts'
+      preLoaderRoute: typeof ApiPublicV1AccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/v1/auth/verify': {
       id: '/api/public/v1/auth/verify'
       path: '/api/public/v1/auth/verify'
       fullPath: '/api/public/v1/auth/verify'
       preLoaderRoute: typeof ApiPublicV1AuthVerifyRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/accounts/$accountId/status': {
+      id: '/api/public/v1/accounts/$accountId/status'
+      path: '/$accountId/status'
+      fullPath: '/api/public/v1/accounts/$accountId/status'
+      preLoaderRoute: typeof ApiPublicV1AccountsAccountIdStatusRouteImport
+      parentRoute: typeof ApiPublicV1AccountsRoute
+    }
+    '/api/public/v1/accounts/$accountId/disconnect': {
+      id: '/api/public/v1/accounts/$accountId/disconnect'
+      path: '/$accountId/disconnect'
+      fullPath: '/api/public/v1/accounts/$accountId/disconnect'
+      preLoaderRoute: typeof ApiPublicV1AccountsAccountIdDisconnectRouteImport
+      parentRoute: typeof ApiPublicV1AccountsRoute
+    }
+    '/api/public/v1/accounts/$accountId/connect': {
+      id: '/api/public/v1/accounts/$accountId/connect'
+      path: '/$accountId/connect'
+      fullPath: '/api/public/v1/accounts/$accountId/connect'
+      preLoaderRoute: typeof ApiPublicV1AccountsAccountIdConnectRouteImport
+      parentRoute: typeof ApiPublicV1AccountsRoute
     }
   }
 }
@@ -379,10 +459,29 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface ApiPublicV1AccountsRouteChildren {
+  ApiPublicV1AccountsAccountIdConnectRoute: typeof ApiPublicV1AccountsAccountIdConnectRoute
+  ApiPublicV1AccountsAccountIdDisconnectRoute: typeof ApiPublicV1AccountsAccountIdDisconnectRoute
+  ApiPublicV1AccountsAccountIdStatusRoute: typeof ApiPublicV1AccountsAccountIdStatusRoute
+}
+
+const ApiPublicV1AccountsRouteChildren: ApiPublicV1AccountsRouteChildren = {
+  ApiPublicV1AccountsAccountIdConnectRoute:
+    ApiPublicV1AccountsAccountIdConnectRoute,
+  ApiPublicV1AccountsAccountIdDisconnectRoute:
+    ApiPublicV1AccountsAccountIdDisconnectRoute,
+  ApiPublicV1AccountsAccountIdStatusRoute:
+    ApiPublicV1AccountsAccountIdStatusRoute,
+}
+
+const ApiPublicV1AccountsRouteWithChildren =
+  ApiPublicV1AccountsRoute._addFileChildren(ApiPublicV1AccountsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicV1AccountsRoute: ApiPublicV1AccountsRouteWithChildren,
   ApiPublicV1MessagesRoute: ApiPublicV1MessagesRoute,
   ApiPublicWaDeliveryRoute: ApiPublicWaDeliveryRoute,
   ApiPublicWaMessageRoute: ApiPublicWaMessageRoute,
