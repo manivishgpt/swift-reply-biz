@@ -173,7 +173,7 @@ function WelcomeStep({ userCount, onNext }: { userCount: number; onNext: () => v
 function SecretsStep({
   env, loading, onRefresh, onBack, onNext,
 }: {
-  env: { bridgeBaseUrl: boolean; bridgeSharedSecret: boolean; webhookSecret: boolean; lovableApiKey: boolean; supabaseUrl: boolean } | undefined;
+  env: { bridgeBaseUrl: boolean; bridgeSharedSecret: boolean; webhookSecret: boolean; openRouterApiKey: boolean; supabaseUrl: boolean } | undefined;
   loading: boolean;
   onRefresh: () => void;
   onBack: () => void;
@@ -181,7 +181,7 @@ function SecretsStep({
 }) {
   const items = [
     { key: "supabaseUrl", label: "SUPABASE_URL", required: true, desc: "Backend URL (auto-set by Lovable Cloud)." },
-    { key: "lovableApiKey", label: "LOVABLE_API_KEY", required: true, desc: "Lovable AI Gateway key for AI replies." },
+    { key: "openRouterApiKey", label: "OPENROUTER_API_KEY", required: true, desc: "OpenRouter key for AI auto-replies (free models with fallback)." },
     { key: "bridgeBaseUrl", label: "BRIDGE_BASE_URL", required: true, desc: "Public URL of your deployed Baileys bridge." },
     { key: "bridgeSharedSecret", label: "BRIDGE_SHARED_SECRET", required: true, desc: "HMAC secret shared between app and bridge." },
     { key: "webhookSecret", label: "WEBHOOK_SECRET", required: true, desc: "Verifies incoming webhooks from the bridge." },
