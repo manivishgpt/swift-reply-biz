@@ -84,10 +84,154 @@ export const Route = createFileRoute("/api/public/wa/message")({
           })
           .eq("id", convRow.id);
 
-        // TODO (phase 4): run rule engine + AI auto-reply pipeline here.
+        // Auto-reply pipeline (rule engine + AI fallback)
+        try {
+          await runAutoReply({
+            accountId: parsed.accountId,
+            conversationId: convRow.id,
+            from: parsed.from,
+            incomingBody: parsed.body ?? "",
+            supabaseAdmin,
+          });
+        } catch (e) {
+          console.error("[auto-reply] failed:", (e as Error).message);
+        }
 
         return Response.json({ ok: true });
       },
     },
   },
 });
+
+type AdminClient = Awaited<ReturnType<typeof import("@/integrations/supabase/client.server")>>["supabaseAdmin"];
+
+async function runAutoReply(args: {
+  accountId: string;
+  conversationId: string;
+  from: string;
+  incomingBody: string;
+  supabaseAdmin: AdminClient;
+}) {
+  const { accountId, conversationId, from, incomingBody, supabaseAdmin } = args;
+
+  const { data: acct } = await supabaseAdmin
+    .from("wa_accounts")
+    .select("auto_reply_enabled, ai_enabled, ai_prompt, status")
+    .eq("id", accountId)
+    .maybeSingle();
+
+  if (!acct || !acct.auto_reply_enabled || acct.status !== "connected") return;
+
+  // 1. Match rules
+  const { data: rules } = await supabaseAdmin
+    .from("reply_rules")
+    .select("trigger_type, pattern, response_template, priority")
+    .eq("account_id", accountId)
+    .eq("enabled", true)
+    .order("priority", { ascending: false });
+
+  const text = (incomingBody || "").trim();
+  const lower = text.toLowerCase();
+  let reply: string | null = null;
+
+  for (const r of rules ?? []) {
+    const pattern = (r.pattern ?? "").trim();
+    if (r.trigger_type === "any") {
+      reply = r.response_template;
+      break;
+    }
+    if (!pattern) continue;
+    if (r.trigger_type === "keyword") {
+      const kws = pattern.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean);
+      if (kws.some((k) => lower.includes(k))) {
+        reply = r.response_template;
+        break;
+      }
+    } else if (r.trigger_type === "regex") {
+      try {
+        if (new RegExp(pattern, "i").test(text)) {
+          reply = r.response_template;
+          break;
+        }
+      } catch {
+        // ignore invalid regex
+      }
+    }
+  }
+
+  // 2. AI fallback
+  if (!reply && acct.ai_enabled && text) {
+    reply = await generateAiReply(acct.ai_prompt ?? "", text);
+  }
+
+  if (!reply) return;
+
+  // 3. Send via bridge + log outbound message
+  const { bridge } = await import("@/lib/bridge.server");
+  const { data: msg } = await supabaseAdmin
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      direction: "out",
+      type: "text",
+      body: reply,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  try {
+    const result = await bridge.send(accountId, { to: from, type: "text", body: reply });
+    if (msg) {
+      await supabaseAdmin
+        .from("messages")
+        .update({ status: "sent", wa_message_id: result.wa_message_id })
+        .eq("id", msg.id);
+    }
+    await supabaseAdmin
+      .from("conversations")
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message_preview: reply.slice(0, 120),
+      })
+      .eq("id", conversationId);
+  } catch (e) {
+    if (msg) {
+      await supabaseAdmin.from("messages").update({ status: "failed" }).eq("id", msg.id);
+    }
+    throw e;
+  }
+}
+
+async function generateAiReply(systemPrompt: string, userText: string): Promise<string | null> {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) {
+    console.warn("[auto-reply] LOVABLE_API_KEY missing — skipping AI reply");
+    return null;
+  }
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt || "You are a helpful WhatsApp assistant. Reply concisely." },
+          { role: "user", content: userText },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      console.error("[auto-reply] AI gateway error:", res.status, await res.text());
+      return null;
+    }
+    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return json.choices?.[0]?.message?.content?.trim() || null;
+  } catch (e) {
+    console.error("[auto-reply] AI call failed:", (e as Error).message);
+    return null;
+  }
+}
