@@ -25,6 +25,7 @@ import { Route as ApiPublicWaMessageRouteImport } from './routes/api/public/wa/m
 import { Route as ApiPublicWaDeliveryRouteImport } from './routes/api/public/wa/delivery'
 import { Route as ApiPublicV1MessagesRouteImport } from './routes/api/public/v1/messages'
 import { Route as ApiPublicV1AccountsRouteImport } from './routes/api/public/v1/accounts'
+import { Route as ApiPublicHooksCleanupAccountsRouteImport } from './routes/api/public/hooks/cleanup-accounts'
 import { Route as ApiPublicV1AuthVerifyRouteImport } from './routes/api/public/v1/auth.verify'
 import { Route as ApiPublicV1AccountsAccountIdStatusRouteImport } from './routes/api/public/v1/accounts.$accountId.status'
 import { Route as ApiPublicV1AccountsAccountIdDisconnectRouteImport } from './routes/api/public/v1/accounts.$accountId.disconnect'
@@ -109,6 +110,12 @@ const ApiPublicV1AccountsRoute = ApiPublicV1AccountsRouteImport.update({
   path: '/api/public/v1/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksCleanupAccountsRoute =
+  ApiPublicHooksCleanupAccountsRouteImport.update({
+    id: '/api/public/hooks/cleanup-accounts',
+    path: '/api/public/hooks/cleanup-accounts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicV1AuthVerifyRoute = ApiPublicV1AuthVerifyRouteImport.update({
   id: '/api/public/v1/auth/verify',
   path: '/api/public/v1/auth/verify',
@@ -144,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/hooks/cleanup-accounts': typeof ApiPublicHooksCleanupAccountsRoute
   '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
   '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
@@ -165,6 +173,7 @@ export interface FileRoutesByTo {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/hooks/cleanup-accounts': typeof ApiPublicHooksCleanupAccountsRoute
   '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
   '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
@@ -188,6 +197,7 @@ export interface FileRoutesById {
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/hooks/cleanup-accounts': typeof ApiPublicHooksCleanupAccountsRoute
   '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
   '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/hooks/cleanup-accounts'
     | '/api/public/v1/accounts'
     | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/hooks/cleanup-accounts'
     | '/api/public/v1/accounts'
     | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
@@ -254,6 +266,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rules'
     | '/_authenticated/settings'
     | '/_authenticated/contacts/$id'
+    | '/api/public/hooks/cleanup-accounts'
     | '/api/public/v1/accounts'
     | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
@@ -269,6 +282,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksCleanupAccountsRoute: typeof ApiPublicHooksCleanupAccountsRoute
   ApiPublicV1AccountsRoute: typeof ApiPublicV1AccountsRouteWithChildren
   ApiPublicV1MessagesRoute: typeof ApiPublicV1MessagesRoute
   ApiPublicWaDeliveryRoute: typeof ApiPublicWaDeliveryRoute
@@ -391,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1AccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/cleanup-accounts': {
+      id: '/api/public/hooks/cleanup-accounts'
+      path: '/api/public/hooks/cleanup-accounts'
+      fullPath: '/api/public/hooks/cleanup-accounts'
+      preLoaderRoute: typeof ApiPublicHooksCleanupAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/v1/auth/verify': {
       id: '/api/public/v1/auth/verify'
       path: '/api/public/v1/auth/verify'
@@ -481,6 +502,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksCleanupAccountsRoute: ApiPublicHooksCleanupAccountsRoute,
   ApiPublicV1AccountsRoute: ApiPublicV1AccountsRouteWithChildren,
   ApiPublicV1MessagesRoute: ApiPublicV1MessagesRoute,
   ApiPublicWaDeliveryRoute: ApiPublicWaDeliveryRoute,
