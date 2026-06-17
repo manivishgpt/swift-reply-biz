@@ -9,6 +9,22 @@ const SETTING_KEYS = [
 ] as const;
 type SettingKey = (typeof SETTING_KEYS)[number];
 
+const INSTALL_LOCK_KEY = "INSTALL_LOCKED";
+
+async function isInstallLocked(): Promise<boolean> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", INSTALL_LOCK_KEY)
+      .maybeSingle();
+    return data?.value === "true";
+  } catch {
+    return false;
+  }
+}
+
 async function countAdmins(): Promise<number> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -63,7 +79,8 @@ export const getInstallStatus = createServerFn({ method: "GET" }).handler(async 
     // ignore — return zeros so wizard still renders
   }
 
-  return { env, bridgeReachable, bridgeError, adminCount, userCount };
+  const locked = await isInstallLocked();
+  return { env, bridgeReachable, bridgeError, adminCount, userCount, locked };
 });
 
 // Save runtime configuration. First-run (no admin exists) is open so a fresh
@@ -78,6 +95,7 @@ const SaveSchema = z.object({
 export const saveInstallSecrets = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => SaveSchema.parse(data))
   .handler(async ({ data }) => {
+    if (await isInstallLocked()) throw new Error("Installer is locked.");
     const admins = await countAdmins();
     if (admins > 0) {
       // Lock down after first admin: require authenticated admin.
@@ -127,6 +145,7 @@ const AdminSchema = z.object({
 export const createFirstAdmin = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AdminSchema.parse(data))
   .handler(async ({ data }) => {
+    if (await isInstallLocked()) throw new Error("Installer is locked.");
     const admins = await countAdmins();
     if (admins > 0) {
       throw new Error("An admin already exists. Sign in instead.");
