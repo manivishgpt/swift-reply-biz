@@ -33,9 +33,14 @@ const logger = pino({ level: 'info' });
 // Verify incoming request signature from Wapix dashboard
 function verifySignature(req, res, next) {
   const signature = req.headers['x-wapix-signature'];
+  console.log(`[HTTP] ${req.method} ${req.path}`, {
+    hasSignature: Boolean(signature),
+    bodyPreview: (req.rawBody ?? '').slice(0, 300),
+  });
   if (!BRIDGE_SHARED_SECRET) return next(); // skip verification if not configured for testing
   
   if (!signature) {
+    console.warn(`[HTTP] ${req.method} ${req.path} -> 401 missing signature`);
     return res.status(401).send("Unauthorized: Missing signature");
   }
 
@@ -44,9 +49,15 @@ function verifySignature(req, res, next) {
 
   try {
     if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      console.warn(`[HTTP] ${req.method} ${req.path} -> 401 invalid signature`, {
+        got: String(signature).slice(0, 12) + '…',
+        expected: expected.slice(0, 12) + '…',
+        bodyLen: bodyStr.length,
+      });
       return res.status(401).send("Unauthorized: Invalid signature");
     }
   } catch (e) {
+    console.warn(`[HTTP] ${req.method} ${req.path} -> 401 signature compare error`, e.message);
     return res.status(401).send("Unauthorized");
   }
   next();
@@ -66,6 +77,12 @@ async function sendWebhook(endpoint, payload) {
   const url = `${WEBHOOK_URL.replace(/\/$/, '')}${endpoint}`;
   const body = JSON.stringify(payload);
   const signature = signBody(WEBHOOK_SECRET, body);
+
+  console.log(`[Webhook ->] ${endpoint}`, {
+    url,
+    bodyLen: body.length,
+    payloadPreview: body.slice(0, 400),
+  });
 
   try {
     const res = await fetch(url, {
@@ -167,10 +184,14 @@ async function startWhatsAppSession(accountId, { reset = false } = {}) {
 
   // Handle incoming messages
   sock.ev.on('messages.upsert', async (m) => {
+    console.log(`[messages.upsert] account=${accountId} type=${m.type} count=${m.messages?.length ?? 0}`);
     if (m.type !== 'notify') return;
 
     for (const msg of m.messages) {
-      if (msg.key.fromMe) continue; // Skip messages sent by self
+      if (msg.key.fromMe) {
+        console.log(`[messages.upsert] skip fromMe id=${msg.key.id}`);
+        continue;
+      }
 
       const from = msg.key.remoteJid;
       const display_name = msg.pushName || '';
@@ -193,6 +214,19 @@ async function startWhatsAppSession(accountId, { reset = false } = {}) {
         type = 'system';
         body = '[Other Message Type]';
       }
+
+      const isGroup = from.endsWith('@g.us');
+      console.log(`[INCOMING MSG]`, {
+        accountId,
+        from,
+        fromName: display_name,
+        fromPhone: phone,
+        isGroup,
+        type,
+        waMessageId: msg.key.id,
+        bodyLen: body.length,
+        body: body.slice(0, 500),
+      });
 
       await sendWebhook('/api/public/wa/message', {
         accountId,
@@ -273,8 +307,22 @@ app.post('/sessions/:accountId/send', verifySignature, async (req, res) => {
   const { accountId } = req.params;
   const { to, type, body, mediaUrl } = req.body;
 
+  console.log(`[SEND REQUEST]`, {
+    accountId,
+    to,
+    type,
+    bodyLen: body?.length ?? 0,
+    bodyPreview: (body ?? '').slice(0, 300),
+    mediaUrl: mediaUrl ?? null,
+  });
+
   const session = sessions[accountId];
   if (!session || session.status !== 'connected') {
+    console.warn(`[SEND BLOCKED] session not connected`, {
+      accountId,
+      exists: Boolean(session),
+      status: session?.status,
+    });
     return res.status(400).send("WhatsApp session is not connected");
   }
 
@@ -286,8 +334,10 @@ app.post('/sessions/:accountId/send', verifySignature, async (req, res) => {
       sentMsg = await session.sock.sendMessage(to, { text: body });
     }
 
+    console.log(`[SEND OK]`, { accountId, to, wa_message_id: sentMsg.key.id });
     res.json({ wa_message_id: sentMsg.key.id });
   } catch (e) {
+    console.error(`[SEND FAILED]`, { accountId, to, error: e.message, stack: e.stack });
     res.status(500).json({ error: e.message });
   }
 });
