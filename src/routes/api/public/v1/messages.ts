@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { CORS_HEADERS, corsPreflight, withCors } from "@/lib/public-api-cors";
 
 const SendSchema = z.object({
   to: z.string().trim().min(6).max(20),
@@ -10,7 +11,7 @@ const SendSchema = z.object({
 function jsonError(status: number, code: string, message: string) {
   return new Response(JSON.stringify({ error: { code, message } }), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
 
@@ -53,6 +54,7 @@ function normalizePhone(raw: string): string {
 export const Route = createFileRoute("/api/public/v1/messages")({
   server: {
     handlers: {
+      OPTIONS: async () => corsPreflight(),
       POST: async ({ request }) => {
         const auth = await authenticate(request);
         if ("error" in auth) return auth.error;
@@ -137,13 +139,13 @@ export const Route = createFileRoute("/api/public/v1/messages")({
             })
             .eq("id", conversationId);
 
-          return Response.json({
+          return withCors(Response.json({
             ok: true,
             message_id: msg.id,
             wa_message_id: result.wa_message_id,
             conversation_id: conversationId,
             to: phone,
-          });
+          }));
         } catch (e) {
           await supabaseAdmin.from("messages").update({ status: "failed" }).eq("id", msg.id);
           return jsonError(502, "bridge_error", e instanceof Error ? e.message : "Bridge send failed");
