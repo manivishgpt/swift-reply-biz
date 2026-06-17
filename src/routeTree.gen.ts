@@ -23,6 +23,7 @@ import { Route as AuthenticatedContactsIdRouteImport } from './routes/_authentic
 import { Route as ApiPublicWaStatusRouteImport } from './routes/api/public/wa/status'
 import { Route as ApiPublicWaMessageRouteImport } from './routes/api/public/wa/message'
 import { Route as ApiPublicWaDeliveryRouteImport } from './routes/api/public/wa/delivery'
+import { Route as ApiPublicV1MessagesRouteImport } from './routes/api/public/v1/messages'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -93,6 +94,11 @@ const ApiPublicWaDeliveryRoute = ApiPublicWaDeliveryRouteImport.update({
   path: '/api/public/wa/delivery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1MessagesRoute = ApiPublicV1MessagesRouteImport.update({
+  id: '/api/public/v1/messages',
+  path: '/api/public/v1/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rules'
     | '/_authenticated/settings'
     | '/_authenticated/contacts/$id'
+    | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
@@ -194,6 +206,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicV1MessagesRoute: typeof ApiPublicV1MessagesRoute
   ApiPublicWaDeliveryRoute: typeof ApiPublicWaDeliveryRoute
   ApiPublicWaMessageRoute: typeof ApiPublicWaMessageRoute
   ApiPublicWaStatusRoute: typeof ApiPublicWaStatusRoute
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWaDeliveryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/messages': {
+      id: '/api/public/v1/messages'
+      path: '/api/public/v1/messages'
+      fullPath: '/api/public/v1/messages'
+      preLoaderRoute: typeof ApiPublicV1MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -343,6 +363,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicV1MessagesRoute: ApiPublicV1MessagesRoute,
   ApiPublicWaDeliveryRoute: ApiPublicWaDeliveryRoute,
   ApiPublicWaMessageRoute: ApiPublicWaMessageRoute,
   ApiPublicWaStatusRoute: ApiPublicWaStatusRoute,
