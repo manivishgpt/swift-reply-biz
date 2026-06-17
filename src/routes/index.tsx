@@ -33,7 +33,7 @@ function Index() {
           </div>
           <div className="flex gap-2">
             {signedIn ? (
-              <Button asChild><Link to="/inbox">Open inbox</Link></Button>
+              <Button asChild><Link to="/app">Open dashboard</Link></Button>
             ) : (
               <>
                 <Button variant="ghost" asChild><Link to="/auth">Sign in</Link></Button>

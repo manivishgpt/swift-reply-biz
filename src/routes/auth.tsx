@@ -35,7 +35,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: search.redirect ?? "/inbox" });
+      if (data.user) navigate({ to: search.redirect ?? "/app" });
     });
   }, [navigate, search.redirect]);
 
@@ -58,7 +58,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: search.redirect ?? "/inbox" });
+      navigate({ to: search.redirect ?? "/app" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Authentication failed");
     } finally {
@@ -72,7 +72,7 @@ function AuthPage() {
       const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
       if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
       if (result.redirected) return;
-      navigate({ to: search.redirect ?? "/inbox" });
+      navigate({ to: search.redirect ?? "/app" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Google sign-in failed");
       setBusy(false);

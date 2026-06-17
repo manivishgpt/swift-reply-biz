@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const nav = [
-  { to: "/", label: "Dashboard", icon: MessageSquare },
+  { to: "/app", label: "Dashboard", icon: MessageSquare },
   { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/contacts", label: "Contacts", icon: Users },
   { to: "/accounts", label: "WhatsApp accounts", icon: Phone },
@@ -64,7 +64,7 @@ function AuthedLayout() {
         </div>
         <nav className="flex-1 space-y-0.5 px-3">
           {nav.map(({ to, label, icon: Icon }) => {
-            const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+            const active = pathname === to || pathname.startsWith(to + "/");
             return (
               <Link
                 key={to}
