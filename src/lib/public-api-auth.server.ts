@@ -8,9 +8,9 @@ export type PublicApiAuth = {
   accountId: string | null;
 };
 
+import { CORS_HEADERS } from "./public-api-cors";
+
 export function jsonError(status: number, code: string, message: string) {
-  // Lazy import to avoid bundling concerns; CORS_HEADERS is a plain object.
-  const { CORS_HEADERS } = require("./public-api-cors") as typeof import("./public-api-cors");
   return new Response(JSON.stringify({ error: { code, message } }), {
     status,
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
