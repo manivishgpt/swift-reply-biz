@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated.setup'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated.rules'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof AuthenticatedInboxRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/setup': typeof AuthenticatedSetupRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
   '/api/public/hooks/cleanup-accounts': typeof ApiPublicHooksCleanupAccountsRoute
   '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof AuthenticatedInboxRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/setup': typeof AuthenticatedSetupRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
   '/api/public/hooks/cleanup-accounts': typeof ApiPublicHooksCleanupAccountsRoute
   '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/contacts/$id': typeof AuthenticatedContactsIdRoute
   '/api/public/hooks/cleanup-accounts': typeof ApiPublicHooksCleanupAccountsRoute
   '/api/public/v1/accounts': typeof ApiPublicV1AccountsRouteWithChildren
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/rules'
     | '/settings'
+    | '/setup'
     | '/contacts/$id'
     | '/api/public/hooks/cleanup-accounts'
     | '/api/public/v1/accounts'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/rules'
     | '/settings'
+    | '/setup'
     | '/contacts/$id'
     | '/api/public/hooks/cleanup-accounts'
     | '/api/public/v1/accounts'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inbox'
     | '/_authenticated/rules'
     | '/_authenticated/settings'
+    | '/_authenticated/setup'
     | '/_authenticated/contacts/$id'
     | '/api/public/hooks/cleanup-accounts'
     | '/api/public/v1/accounts'
@@ -313,6 +325,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/setup': {
+      id: '/_authenticated/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof AuthenticatedSetupRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
@@ -464,6 +483,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -474,6 +494,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSetupRoute: AuthenticatedSetupRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -513,13 +534,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
