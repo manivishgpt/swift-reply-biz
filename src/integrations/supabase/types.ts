@@ -14,16 +14,545 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          label: string
+          last_used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          label: string
+          last_used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          label?: string
+          last_used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      broadcast_recipients: {
+        Row: {
+          broadcast_id: string
+          contact_id: string
+          error: string | null
+          id: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["recipient_status"]
+        }
+        Insert: {
+          broadcast_id: string
+          contact_id: string
+          error?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["recipient_status"]
+        }
+        Update: {
+          broadcast_id?: string
+          contact_id?: string
+          error?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["recipient_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_recipients_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_recipients_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcasts: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          media_url: string | null
+          name: string
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["broadcast_status"]
+          throttle_per_min: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          media_url?: string | null
+          name: string
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["broadcast_status"]
+          throttle_per_min?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          media_url?: string | null
+          name?: string
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["broadcast_status"]
+          throttle_per_min?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcasts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "wa_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_tags: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          tag: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          tag: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_tags_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          notes: string | null
+          phone: string | null
+          pipeline_stage: Database["public"]["Enums"]["pipeline_stage"]
+          updated_at: string
+          wa_jid: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
+          updated_at?: string
+          wa_jid: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
+          updated_at?: string
+          wa_jid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "wa_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          account_id: string
+          assigned_agent_id: string | null
+          contact_id: string
+          created_at: string
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assigned_agent_id?: string | null
+          contact_id: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assigned_agent_id?: string | null
+          contact_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "wa_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string | null
+          conversation_id: string
+          created_at: string
+          direction: Database["public"]["Enums"]["msg_direction"]
+          id: string
+          media_url: string | null
+          sent_by_ai: boolean
+          sent_by_user_id: string | null
+          status: Database["public"]["Enums"]["msg_status"]
+          type: Database["public"]["Enums"]["msg_type"]
+          wa_message_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          conversation_id: string
+          created_at?: string
+          direction: Database["public"]["Enums"]["msg_direction"]
+          id?: string
+          media_url?: string | null
+          sent_by_ai?: boolean
+          sent_by_user_id?: string | null
+          status?: Database["public"]["Enums"]["msg_status"]
+          type?: Database["public"]["Enums"]["msg_type"]
+          wa_message_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          conversation_id?: string
+          created_at?: string
+          direction?: Database["public"]["Enums"]["msg_direction"]
+          id?: string
+          media_url?: string | null
+          sent_by_ai?: boolean
+          sent_by_user_id?: string | null
+          status?: Database["public"]["Enums"]["msg_status"]
+          type?: Database["public"]["Enums"]["msg_type"]
+          wa_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reply_rules: {
+        Row: {
+          account_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          pattern: string
+          priority: number
+          response_template: string
+          trigger_type: Database["public"]["Enums"]["rule_trigger"]
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          pattern: string
+          priority?: number
+          response_template: string
+          trigger_type?: Database["public"]["Enums"]["rule_trigger"]
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          pattern?: string
+          priority?: number
+          response_template?: string
+          trigger_type?: Database["public"]["Enums"]["rule_trigger"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "wa_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wa_account_agents: {
+        Row: {
+          account_id: string
+          agent_user_id: string
+          created_at: string
+        }
+        Insert: {
+          account_id: string
+          agent_user_id: string
+          created_at?: string
+        }
+        Update: {
+          account_id?: string
+          agent_user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_account_agents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "wa_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_accounts: {
+        Row: {
+          ai_enabled: boolean
+          ai_prompt: string | null
+          auto_reply_enabled: boolean
+          business_hours: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          last_qr: string | null
+          last_qr_at: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["wa_account_status"]
+          throttle_per_min: number
+          updated_at: string
+        }
+        Insert: {
+          ai_enabled?: boolean
+          ai_prompt?: string | null
+          auto_reply_enabled?: boolean
+          business_hours?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          last_qr?: string | null
+          last_qr_at?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["wa_account_status"]
+          throttle_per_min?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          ai_prompt?: string | null
+          auto_reply_enabled?: boolean
+          business_hours?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          last_qr?: string | null
+          last_qr_at?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["wa_account_status"]
+          throttle_per_min?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          payload: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_access_account: { Args: { _account_id: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "agent"
+      broadcast_status:
+        | "draft"
+        | "scheduled"
+        | "running"
+        | "completed"
+        | "failed"
+        | "canceled"
+      msg_direction: "in" | "out"
+      msg_status: "pending" | "sent" | "delivered" | "read" | "failed"
+      msg_type:
+        | "text"
+        | "image"
+        | "audio"
+        | "video"
+        | "document"
+        | "sticker"
+        | "location"
+        | "contact"
+        | "system"
+      pipeline_stage: "new" | "qualified" | "customer" | "lost"
+      recipient_status: "pending" | "sent" | "delivered" | "failed"
+      rule_trigger: "keyword" | "regex" | "any"
+      wa_account_status:
+        | "disconnected"
+        | "connecting"
+        | "connected"
+        | "banned"
+        | "error"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +679,39 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "agent"],
+      broadcast_status: [
+        "draft",
+        "scheduled",
+        "running",
+        "completed",
+        "failed",
+        "canceled",
+      ],
+      msg_direction: ["in", "out"],
+      msg_status: ["pending", "sent", "delivered", "read", "failed"],
+      msg_type: [
+        "text",
+        "image",
+        "audio",
+        "video",
+        "document",
+        "sticker",
+        "location",
+        "contact",
+        "system",
+      ],
+      pipeline_stage: ["new", "qualified", "customer", "lost"],
+      recipient_status: ["pending", "sent", "delivered", "failed"],
+      rule_trigger: ["keyword", "regex", "any"],
+      wa_account_status: [
+        "disconnected",
+        "connecting",
+        "connected",
+        "banned",
+        "error",
+      ],
+    },
   },
 } as const
