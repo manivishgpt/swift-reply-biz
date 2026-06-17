@@ -248,7 +248,7 @@ async function generateAiReply(
   const { getConfig } = await import("@/lib/runtime-config.server");
   const apiKey = await getConfig("OPENROUTER_API_KEY");
   if (!apiKey) {
-    console.warn("[auto-reply] OPENROUTER_API_KEY missing — open /install to set it");
+    console.warn("[auto-reply] OPENROUTER_API_KEY missing — set it in project secrets");
     return null;
   }
   // Use the user-provided system prompt verbatim when set, so custom

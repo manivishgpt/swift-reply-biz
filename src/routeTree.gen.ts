@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as InstallRouteImport } from './routes/install'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -33,11 +32,6 @@ import { Route as ApiPublicV1AccountsAccountIdStatusRouteImport } from './routes
 import { Route as ApiPublicV1AccountsAccountIdDisconnectRouteImport } from './routes/api/public/v1/accounts.$accountId.disconnect'
 import { Route as ApiPublicV1AccountsAccountIdConnectRouteImport } from './routes/api/public/v1/accounts.$accountId.connect'
 
-const InstallRoute = InstallRouteImport.update({
-  id: '/install',
-  path: '/install',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -155,7 +149,6 @@ const ApiPublicV1AccountsAccountIdConnectRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/install': typeof InstallRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/app': typeof AuthenticatedAppRoute
   '/broadcasts': typeof AuthenticatedBroadcastsRoute
@@ -179,7 +172,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/install': typeof InstallRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/app': typeof AuthenticatedAppRoute
   '/broadcasts': typeof AuthenticatedBroadcastsRoute
@@ -205,7 +197,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
-  '/install': typeof InstallRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/_authenticated/broadcasts': typeof AuthenticatedBroadcastsRoute
@@ -231,7 +222,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/install'
     | '/accounts'
     | '/app'
     | '/broadcasts'
@@ -255,7 +245,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/install'
     | '/accounts'
     | '/app'
     | '/broadcasts'
@@ -280,7 +269,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/install'
     | '/_authenticated/accounts'
     | '/_authenticated/app'
     | '/_authenticated/broadcasts'
@@ -306,7 +294,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
-  InstallRoute: typeof InstallRoute
   ApiPublicHooksCleanupAccountsRoute: typeof ApiPublicHooksCleanupAccountsRoute
   ApiPublicV1AccountsRoute: typeof ApiPublicV1AccountsRouteWithChildren
   ApiPublicV1MessagesRoute: typeof ApiPublicV1MessagesRoute
@@ -318,13 +305,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/install': {
-      id: '/install'
-      path: '/install'
-      fullPath: '/install'
-      preLoaderRoute: typeof InstallRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -543,7 +523,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
-  InstallRoute: InstallRoute,
   ApiPublicHooksCleanupAccountsRoute: ApiPublicHooksCleanupAccountsRoute,
   ApiPublicV1AccountsRoute: ApiPublicV1AccountsRouteWithChildren,
   ApiPublicV1MessagesRoute: ApiPublicV1MessagesRoute,
@@ -555,13 +534,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
