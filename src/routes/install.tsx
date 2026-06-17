@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Check, CheckCircle2, AlertTriangle, Copy, RefreshCw, ExternalLink,
-  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound, Database,
+  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound, Database, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getInstallStatus, saveInstallSecrets, createFirstAdmin, validateSupabaseCreds } from "@/lib/install.functions";
+import { getInstallStatus, saveInstallSecrets, createFirstAdmin, validateSupabaseCreds, lockInstaller } from "@/lib/install.functions";
 
 export const Route = createFileRoute("/install")({
   ssr: false,
@@ -65,6 +65,24 @@ function InstallWizard() {
       </header>
 
       <div className="mx-auto max-w-3xl px-6 py-8">
+        {status.data?.locked ? (
+          <Card className="p-8 text-center">
+            <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h2 className="mt-4 text-2xl font-semibold">Installer is locked</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              This Wapix instance has been sealed. Configuration via the public wizard is permanently disabled.
+              An administrator can re-open it by removing the <code>INSTALL_LOCKED</code> row from the
+              database&apos;s <code>app_settings</code> table.
+            </p>
+            <div className="mt-6 flex justify-center gap-2">
+              <Button asChild><Link to="/auth">Sign in</Link></Button>
+              <Button variant="outline" asChild><Link to="/">Go home</Link></Button>
+            </div>
+          </Card>
+        ) : (
+        <>
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
           <span>Step {idx + 1} of {STEPS.length}</span>
           <span>{STEPS[idx].title}</span>
@@ -140,6 +158,8 @@ function InstallWizard() {
           />
         )}
         {step === "done" && <DoneStep />}
+        </>
+        )}
       </div>
     </div>
   );
