@@ -24,8 +24,22 @@ async function call<T = unknown>(path: string, init: RequestInit & { json?: unkn
     const headers = new Headers(init.headers as HeadersInit | undefined);
     headers.set("Content-Type", "application/json");
     headers.set("X-Wapix-Signature", signBody(secret, signatureBody));
+    console.log("[bridge] -> request", {
+      method: init.method ?? "GET",
+      url: `${url}${path}`,
+      bodyPreview: body ? body.slice(0, 500) : null,
+      signatureHeader: headers.get("X-Wapix-Signature")?.slice(0, 12) + "…",
+      signedBodyLen: signatureBody.length,
+    });
     const res = await fetch(`${url}${path}`, { ...init, body, headers });
-    return { res, text: await res.text() };
+    const text = await res.text();
+    console.log("[bridge] <- response", {
+      url: `${url}${path}`,
+      status: res.status,
+      ok: res.ok,
+      bodyPreview: text.slice(0, 500),
+    });
+    return { res, text };
   };
 
   let { res, text } = await request(body ?? "");
@@ -33,10 +47,14 @@ async function call<T = unknown>(path: string, init: RequestInit & { json?: unkn
   // Older bridge deployments signed empty GET/DELETE requests as "{}" because
   // Express populated req.body with an empty object. Retry once for compatibility.
   if (!res.ok && res.status === 401 && body === undefined && text.includes("Invalid signature")) {
+    console.log("[bridge] retrying with '{}' signature body for legacy compat");
     ({ res, text } = await request("{}"));
   }
 
-  if (!res.ok) throw new Error(`Bridge ${path} failed: ${res.status} ${text}`);
+  if (!res.ok) {
+    console.error("[bridge] !! call failed", { path, status: res.status, text });
+    throw new Error(`Bridge ${path} failed: ${res.status} ${text}`);
+  }
   return text ? (JSON.parse(text) as T) : ({} as T);
 }
 
