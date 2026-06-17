@@ -35,6 +35,7 @@ type Account = {
 const STATUS_COLORS: Record<string, string> = {
   connected: "bg-primary/15 text-primary",
   connecting: "bg-yellow-500/15 text-yellow-700",
+  qr: "bg-yellow-500/15 text-yellow-700",
   disconnected: "bg-muted text-muted-foreground",
   banned: "bg-destructive/15 text-destructive",
   error: "bg-destructive/15 text-destructive",
