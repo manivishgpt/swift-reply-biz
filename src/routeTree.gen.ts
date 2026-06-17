@@ -9,38 +9,212 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
+import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated.rules'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated.inbox'
+import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated.contacts'
+import { Route as AuthenticatedBroadcastsRouteImport } from './routes/_authenticated.broadcasts'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
+import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated.accounts'
+import { Route as AuthenticatedContactsIdRouteImport } from './routes/_authenticated.contacts.$id'
+import { Route as ApiPublicWaStatusRouteImport } from './routes/api/public/wa/status'
+import { Route as ApiPublicWaMessageRouteImport } from './routes/api/public/wa/message'
+import { Route as ApiPublicWaDeliveryRouteImport } from './routes/api/public/wa/delivery'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedRulesRoute = AuthenticatedRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedBroadcastsRoute = AuthenticatedBroadcastsRouteImport.update({
+  id: '/broadcasts',
+  path: '/broadcasts',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAccountsRoute = AuthenticatedAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedContactsIdRoute = AuthenticatedContactsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedContactsRoute,
+} as any)
+const ApiPublicWaStatusRoute = ApiPublicWaStatusRouteImport.update({
+  id: '/api/public/wa/status',
+  path: '/api/public/wa/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWaMessageRoute = ApiPublicWaMessageRouteImport.update({
+  id: '/api/public/wa/message',
+  path: '/api/public/wa/message',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWaDeliveryRoute = ApiPublicWaDeliveryRouteImport.update({
+  id: '/api/public/wa/delivery',
+  path: '/api/public/wa/delivery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/accounts': typeof AuthenticatedAccountsRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/broadcasts': typeof AuthenticatedBroadcastsRoute
+  '/contacts': typeof AuthenticatedContactsRouteWithChildren
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/rules': typeof AuthenticatedRulesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
+  '/api/public/wa/message': typeof ApiPublicWaMessageRoute
+  '/api/public/wa/status': typeof ApiPublicWaStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/accounts': typeof AuthenticatedAccountsRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/broadcasts': typeof AuthenticatedBroadcastsRoute
+  '/contacts': typeof AuthenticatedContactsRouteWithChildren
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/rules': typeof AuthenticatedRulesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
+  '/api/public/wa/message': typeof ApiPublicWaMessageRoute
+  '/api/public/wa/status': typeof ApiPublicWaStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
+  '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/_authenticated/broadcasts': typeof AuthenticatedBroadcastsRoute
+  '/_authenticated/contacts': typeof AuthenticatedContactsRouteWithChildren
+  '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/rules': typeof AuthenticatedRulesRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
+  '/api/public/wa/message': typeof ApiPublicWaMessageRoute
+  '/api/public/wa/status': typeof ApiPublicWaStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/accounts'
+    | '/app'
+    | '/broadcasts'
+    | '/contacts'
+    | '/inbox'
+    | '/rules'
+    | '/settings'
+    | '/contacts/$id'
+    | '/api/public/wa/delivery'
+    | '/api/public/wa/message'
+    | '/api/public/wa/status'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/accounts'
+    | '/app'
+    | '/broadcasts'
+    | '/contacts'
+    | '/inbox'
+    | '/rules'
+    | '/settings'
+    | '/contacts/$id'
+    | '/api/public/wa/delivery'
+    | '/api/public/wa/message'
+    | '/api/public/wa/status'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/accounts'
+    | '/_authenticated/app'
+    | '/_authenticated/broadcasts'
+    | '/_authenticated/contacts'
+    | '/_authenticated/inbox'
+    | '/_authenticated/rules'
+    | '/_authenticated/settings'
+    | '/_authenticated/contacts/$id'
+    | '/api/public/wa/delivery'
+    | '/api/public/wa/message'
+    | '/api/public/wa/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ApiPublicWaDeliveryRoute: typeof ApiPublicWaDeliveryRoute
+  ApiPublicWaMessageRoute: typeof ApiPublicWaMessageRoute
+  ApiPublicWaStatusRoute: typeof ApiPublicWaStatusRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +222,131 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/rules': {
+      id: '/_authenticated/rules'
+      path: '/rules'
+      fullPath: '/rules'
+      preLoaderRoute: typeof AuthenticatedRulesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/contacts': {
+      id: '/_authenticated/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AuthenticatedContactsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/broadcasts': {
+      id: '/_authenticated/broadcasts'
+      path: '/broadcasts'
+      fullPath: '/broadcasts'
+      preLoaderRoute: typeof AuthenticatedBroadcastsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/accounts': {
+      id: '/_authenticated/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AuthenticatedAccountsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/contacts/$id': {
+      id: '/_authenticated/contacts/$id'
+      path: '/$id'
+      fullPath: '/contacts/$id'
+      preLoaderRoute: typeof AuthenticatedContactsIdRouteImport
+      parentRoute: typeof AuthenticatedContactsRoute
+    }
+    '/api/public/wa/status': {
+      id: '/api/public/wa/status'
+      path: '/api/public/wa/status'
+      fullPath: '/api/public/wa/status'
+      preLoaderRoute: typeof ApiPublicWaStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/wa/message': {
+      id: '/api/public/wa/message'
+      path: '/api/public/wa/message'
+      fullPath: '/api/public/wa/message'
+      preLoaderRoute: typeof ApiPublicWaMessageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/wa/delivery': {
+      id: '/api/public/wa/delivery'
+      path: '/api/public/wa/delivery'
+      fullPath: '/api/public/wa/delivery'
+      preLoaderRoute: typeof ApiPublicWaDeliveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedContactsRouteChildren {
+  AuthenticatedContactsIdRoute: typeof AuthenticatedContactsIdRoute
+}
+
+const AuthenticatedContactsRouteChildren: AuthenticatedContactsRouteChildren = {
+  AuthenticatedContactsIdRoute: AuthenticatedContactsIdRoute,
+}
+
+const AuthenticatedContactsRouteWithChildren =
+  AuthenticatedContactsRoute._addFileChildren(
+    AuthenticatedContactsRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
+  AuthenticatedAppRoute: typeof AuthenticatedAppRoute
+  AuthenticatedBroadcastsRoute: typeof AuthenticatedBroadcastsRoute
+  AuthenticatedContactsRoute: typeof AuthenticatedContactsRouteWithChildren
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
+  AuthenticatedAppRoute: AuthenticatedAppRoute,
+  AuthenticatedBroadcastsRoute: AuthenticatedBroadcastsRoute,
+  AuthenticatedContactsRoute: AuthenticatedContactsRouteWithChildren,
+  AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedRulesRoute: AuthenticatedRulesRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ApiPublicWaDeliveryRoute: ApiPublicWaDeliveryRoute,
+  ApiPublicWaMessageRoute: ApiPublicWaMessageRoute,
+  ApiPublicWaStatusRoute: ApiPublicWaStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
