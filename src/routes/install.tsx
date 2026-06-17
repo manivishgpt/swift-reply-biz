@@ -1,17 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Check, CheckCircle2, AlertTriangle, Copy, RefreshCw, ExternalLink,
   ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getInstallStatus } from "@/lib/install.functions";
+import { getInstallStatus, saveInstallSecrets, createFirstAdmin } from "@/lib/install.functions";
 
 export const Route = createFileRoute("/install")({
   ssr: false,
@@ -179,23 +181,52 @@ function SecretsStep({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const items = [
-    { key: "supabaseUrl", label: "SUPABASE_URL", required: true, desc: "Backend URL (auto-set by Lovable Cloud)." },
-    { key: "openRouterApiKey", label: "OPENROUTER_API_KEY", required: true, desc: "OpenRouter key for AI auto-replies (free models with fallback)." },
-    { key: "bridgeBaseUrl", label: "BRIDGE_BASE_URL", required: true, desc: "Public URL of your deployed Baileys bridge." },
-    { key: "bridgeSharedSecret", label: "BRIDGE_SHARED_SECRET", required: true, desc: "HMAC secret shared between app and bridge." },
-    { key: "webhookSecret", label: "WEBHOOK_SECRET", required: true, desc: "Verifies incoming webhooks from the bridge." },
+  const fields = [
+    { key: "BRIDGE_BASE_URL", envKey: "bridgeBaseUrl", label: "Bridge URL", placeholder: "https://my-bridge.onrender.com", desc: "Public URL of your deployed Baileys bridge.", type: "url" as const },
+    { key: "BRIDGE_SHARED_SECRET", envKey: "bridgeSharedSecret", label: "Bridge Shared Secret", placeholder: "long random string", desc: "HMAC secret — must match the bridge's BRIDGE_SHARED_SECRET.", type: "password" as const },
+    { key: "WEBHOOK_SECRET", envKey: "webhookSecret", label: "Webhook Secret", placeholder: "long random string", desc: "Verifies incoming webhooks from the bridge — must match the bridge's WEBHOOK_SECRET.", type: "password" as const },
+    { key: "OPENROUTER_API_KEY", envKey: "openRouterApiKey", label: "OpenRouter API Key", placeholder: "sk-or-v1-…", desc: "Free-model auto-reply. Get one at openrouter.ai/keys.", type: "password" as const },
   ] as const;
 
-  const allOk = items.every((i) => env?.[i.key as keyof typeof env]);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const saveFn = useServerFn(saveInstallSecrets);
+
+  const allOk = fields.every((f) => env?.[f.envKey as keyof typeof env]);
+
+  function rand() {
+    const buf = new Uint8Array(32);
+    crypto.getRandomValues(buf);
+    return Array.from(buf).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const payload: Record<string, string> = {};
+      for (const f of fields) if (values[f.key]?.trim()) payload[f.key] = values[f.key].trim();
+      if (Object.keys(payload).length === 0) {
+        toast.info("Nothing to save — fill in at least one field.");
+        return;
+      }
+      const res = await saveFn({ data: payload });
+      toast.success(`Saved ${res.saved} setting${res.saved === 1 ? "" : "s"}`);
+      setValues({});
+      onRefresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Card className="p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Backend secrets</h2>
+          <h2 className="text-xl font-semibold">Configure secrets</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Add missing secrets in Lovable Cloud → Backend → Secrets, then re-check.
+            Paste your credentials below — they save directly to the database. No env file editing.
           </p>
         </div>
         <Badge className={allOk ? "bg-primary/15 text-primary" : "bg-yellow-500/15 text-yellow-700"}>
@@ -203,35 +234,66 @@ function SecretsStep({
         </Badge>
       </div>
 
-      <div className="mt-6 space-y-2">
-        {items.map((i) => {
-          const present = env?.[i.key as keyof typeof env] ?? false;
+      <div className="mt-6 space-y-4">
+        {fields.map((f) => {
+          const present = env?.[f.envKey as keyof typeof env] ?? false;
+          const isSecret = f.type === "password";
           return (
-            <div key={i.key} className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
-              {present ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
-              ) : (
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-700" />
-              )}
-              <div className="flex-1">
-                <code className="font-mono text-xs font-medium">{i.label}</code>
-                <p className="mt-0.5 text-xs text-muted-foreground">{i.desc}</p>
+            <div key={f.key} className="rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor={f.key} className="text-sm font-medium">{f.label}</Label>
+                <Badge variant="outline" className={present ? "text-primary border-primary/30" : "text-muted-foreground"}>
+                  {present ? <><CheckCircle2 className="mr-1 h-3 w-3" />saved</> : <><AlertTriangle className="mr-1 h-3 w-3" />not set</>}
+                </Badge>
               </div>
-              <Badge variant="outline" className={present ? "text-primary" : "text-muted-foreground"}>
-                {present ? "set" : "missing"}
-              </Badge>
+              <p className="mt-1 text-xs text-muted-foreground">{f.desc}</p>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  id={f.key}
+                  type={f.type}
+                  placeholder={present ? "•••••••• (saved — paste to update)" : f.placeholder}
+                  value={values[f.key] ?? ""}
+                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                  className="font-mono text-xs"
+                />
+                {isSecret && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const r = rand();
+                      setValues((v) => ({ ...v, [f.key]: r }));
+                      navigator.clipboard.writeText(r).then(() => toast.success("Generated & copied"));
+                    }}
+                  >
+                    Generate
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
 
-      <div className="mt-8 flex items-center justify-between">
+      <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+        Tip: The <b>BRIDGE_SHARED_SECRET</b> and <b>WEBHOOK_SECRET</b> values you generate here
+        must also be set as environment variables on your Baileys bridge (Render/Docker) — that's
+        the only place they can't be auto-synced.
+      </div>
+
+      <div className="mt-6 flex items-center justify-between">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onRefresh} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />Re-check
           </Button>
-          <Button onClick={onNext}>Next <ArrowRight className="ml-2 h-4 w-4" /></Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving…" : "Save settings"}
+          </Button>
+          <Button onClick={onNext} variant={allOk ? "default" : "outline"}>
+            Next <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </div>
     </Card>
@@ -367,13 +429,34 @@ function AdminStep({
   onNext: () => void;
 }) {
   const exists = adminCount > 0;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const createFn = useServerFn(createFirstAdmin);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await createFn({ data: { email, password, fullName: fullName || undefined } });
+      toast.success("Admin created! You can now sign in.");
+      setEmail(""); setPassword(""); setFullName("");
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create admin");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <Card className="p-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">First admin account</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            The very first signup becomes the admin. After that, additional users sign up as regular agents.
+            Create the first administrator. After this, additional users sign up as agents.
           </p>
         </div>
         <Badge className={exists ? "bg-primary/15 text-primary" : "bg-yellow-500/15 text-yellow-700"}>
@@ -381,26 +464,40 @@ function AdminStep({
         </Badge>
       </div>
 
-      <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm">
-        <p className="font-medium">How it works</p>
-        <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
-          <li>Click <b>Create admin</b> below — it opens the signup page.</li>
-          <li>Sign up with your work email and password.</li>
-          <li>Return here and click <b>Re-check</b>. Admin count should be 1.</li>
-        </ol>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button asChild>
-          <Link to="/auth" search={{ mode: "signup" }}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            {exists ? "Sign in" : "Create admin"}
-          </Link>
-        </Button>
-        <Button variant="outline" onClick={onRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />Re-check
-        </Button>
-      </div>
+      {exists ? (
+        <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+          <p>Admin already exists. You can sign in to manage the instance.</p>
+          <div className="mt-3 flex gap-2">
+            <Button asChild><Link to="/auth">Sign in</Link></Button>
+            <Button variant="outline" onClick={onRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />Re-check
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <div>
+            <Label htmlFor="admin-name">Full name (optional)</Label>
+            <Input id="admin-name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" autoComplete="name" />
+          </div>
+          <div>
+            <Label htmlFor="admin-email">Email</Label>
+            <Input id="admin-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@yourdomain.com" autoComplete="email" />
+          </div>
+          <div>
+            <Label htmlFor="admin-pass">Password (min 8 characters)</Label>
+            <Input id="admin-pass" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={creating}>
+              <UserPlus className="mr-2 h-4 w-4" />{creating ? "Creating…" : "Create admin"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />Re-check
+            </Button>
+          </div>
+        </form>
+      )}
 
       <div className="mt-8 flex items-center justify-between">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>

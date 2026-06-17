@@ -1,27 +1,16 @@
 // Server-only HTTP client for talking to the self-hosted Baileys bridge.
 import { createHmac, timingSafeEqual } from "crypto";
+import { getConfig } from "./runtime-config.server";
 
-const BRIDGE_BASE_URL = process.env.BRIDGE_BASE_URL;
-const BRIDGE_SHARED_SECRET = process.env.BRIDGE_SHARED_SECRET;
-
-let configLogged = false;
-function logConfigOnce() {
-  if (configLogged) return;
-  configLogged = true;
-  console.log("[bridge] config", {
-    bridgeBaseUrl: BRIDGE_BASE_URL || "(unset)",
-    hasSharedSecret: Boolean(BRIDGE_SHARED_SECRET),
-  });
-}
-
-function requireBridge() {
-  logConfigOnce();
-  if (!BRIDGE_BASE_URL || !BRIDGE_SHARED_SECRET) {
+async function requireBridge() {
+  const baseUrl = await getConfig("BRIDGE_BASE_URL");
+  const secret = await getConfig("BRIDGE_SHARED_SECRET");
+  if (!baseUrl || !secret) {
     throw new Error(
-      "Bridge is not configured. Set BRIDGE_BASE_URL and BRIDGE_SHARED_SECRET in project secrets, and deploy your Baileys bridge.",
+      "Bridge is not configured. Open /install and save BRIDGE_BASE_URL and BRIDGE_SHARED_SECRET, then deploy your Baileys bridge.",
     );
   }
-  return { url: BRIDGE_BASE_URL.replace(/\/$/, ""), secret: BRIDGE_SHARED_SECRET };
+  return { url: baseUrl.replace(/\/$/, ""), secret };
 }
 
 function signBody(secret: string, body: string) {
@@ -29,7 +18,7 @@ function signBody(secret: string, body: string) {
 }
 
 async function call<T = unknown>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
-  const { url, secret } = requireBridge();
+  const { url, secret } = await requireBridge();
   const body = init.json !== undefined ? JSON.stringify(init.json) : (init.body as string | undefined);
   const request = async (signatureBody: string) => {
     const headers = new Headers(init.headers as HeadersInit | undefined);
@@ -88,8 +77,8 @@ export const bridge = {
     call<{ wa_message_id: string }>(`/sessions/${accountId}/send`, { method: "POST", json: payload }),
 };
 
-export function verifyWebhookSignature(body: string, signature: string | null): boolean {
-  const secret = process.env.WEBHOOK_SECRET;
+export async function verifyWebhookSignature(body: string, signature: string | null): Promise<boolean> {
+  const secret = await getConfig("WEBHOOK_SECRET");
   if (!secret || !signature) return false;
   const expected = createHmac("sha256", secret).update(body).digest("hex");
   const a = Buffer.from(signature);

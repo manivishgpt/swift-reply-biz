@@ -19,7 +19,7 @@ export const Route = createFileRoute("/api/public/wa/message")({
       POST: async ({ request }) => {
         const raw = await request.text();
         const { verifyWebhookSignature } = await import("@/lib/bridge.server");
-        if (!verifyWebhookSignature(raw, request.headers.get("x-wapix-signature"))) {
+        if (!(await verifyWebhookSignature(raw, request.headers.get("x-wapix-signature")))) {
           return new Response("Invalid signature", { status: 401 });
         }
 
@@ -245,9 +245,10 @@ async function generateAiReply(
   history: { role: "user" | "assistant"; content: string }[],
   userText: string,
 ): Promise<string | null> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const { getConfig } = await import("@/lib/runtime-config.server");
+  const apiKey = await getConfig("OPENROUTER_API_KEY");
   if (!apiKey) {
-    console.warn("[auto-reply] OPENROUTER_API_KEY missing — skipping AI reply");
+    console.warn("[auto-reply] OPENROUTER_API_KEY missing — open /install to set it");
     return null;
   }
   // Use the user-provided system prompt verbatim when set, so custom
@@ -283,6 +284,7 @@ async function generateAiReply(
     "mistralai/mistral-small-3.2-24b-instruct:free",
   ];
 
+  const referer = (await getConfig("BRIDGE_BASE_URL")) ?? "https://wapix.app";
   for (const model of FREE_MODELS) {
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -290,7 +292,7 @@ async function generateAiReply(
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": process.env.BRIDGE_BASE_URL ?? "https://wapix.app",
+          "HTTP-Referer": referer,
           "X-Title": "Wapix Auto-Reply",
         },
         body: JSON.stringify({
