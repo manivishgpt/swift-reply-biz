@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Check, CheckCircle2, AlertTriangle, Copy, RefreshCw, ExternalLink,
-  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound, Database,
+  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound, Database, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getInstallStatus, saveInstallSecrets, createFirstAdmin, validateSupabaseCreds } from "@/lib/install.functions";
+import { getInstallStatus, saveInstallSecrets, createFirstAdmin, validateSupabaseCreds, lockInstaller } from "@/lib/install.functions";
 
 export const Route = createFileRoute("/install")({
   ssr: false,
@@ -65,6 +65,24 @@ function InstallWizard() {
       </header>
 
       <div className="mx-auto max-w-3xl px-6 py-8">
+        {status.data?.locked ? (
+          <Card className="p-8 text-center">
+            <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h2 className="mt-4 text-2xl font-semibold">Installer is locked</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              This Wapix instance has been sealed. Configuration via the public wizard is permanently disabled.
+              An administrator can re-open it by removing the <code>INSTALL_LOCKED</code> row from the
+              database&apos;s <code>app_settings</code> table.
+            </p>
+            <div className="mt-6 flex justify-center gap-2">
+              <Button asChild><Link to="/auth">Sign in</Link></Button>
+              <Button variant="outline" asChild><Link to="/">Go home</Link></Button>
+            </div>
+          </Card>
+        ) : (
+        <>
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
           <span>Step {idx + 1} of {STEPS.length}</span>
           <span>{STEPS[idx].title}</span>
@@ -140,6 +158,8 @@ function InstallWizard() {
           />
         )}
         {step === "done" && <DoneStep />}
+        </>
+        )}
       </div>
     </div>
   );
@@ -518,6 +538,24 @@ function AdminStep({
 /* ---------------------------------- Done ---------------------------------- */
 function DoneStep() {
   const navigate = useNavigate();
+  const [locking, setLocking] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const lockFn = useServerFn(lockInstaller);
+
+  async function lock() {
+    if (!window.confirm("Lock the installer permanently? After this, nobody can re-run the wizard from /install. You must be signed in as admin.")) return;
+    setLocking(true);
+    try {
+      await lockFn();
+      setLocked(true);
+      toast.success("Installer locked");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to lock");
+    } finally {
+      setLocking(false);
+    }
+  }
+
   return (
     <Card className="p-8 text-center">
       <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -530,6 +568,30 @@ function DoneStep() {
       <div className="mt-6 flex justify-center gap-2">
         <Button onClick={() => navigate({ to: "/auth" })}>Sign in</Button>
         <Button variant="outline" onClick={() => navigate({ to: "/" })}>Go home</Button>
+      </div>
+
+      <div className="mt-8 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-left">
+        <div className="flex items-start gap-3">
+          <Lock className="mt-0.5 h-5 w-5 text-destructive" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Lock the installer</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Recommended for production. Permanently disables <code>/install</code> so nobody else
+              can re-run the wizard or change secrets through it. You must be signed in as admin.
+              Reversible only via a direct database edit.
+            </p>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="mt-3"
+              onClick={lock}
+              disabled={locking || locked}
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              {locked ? "Locked" : locking ? "Locking…" : "Lock installer"}
+            </Button>
+          </div>
+        </div>
       </div>
     </Card>
   );

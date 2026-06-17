@@ -9,6 +9,22 @@ const SETTING_KEYS = [
 ] as const;
 type SettingKey = (typeof SETTING_KEYS)[number];
 
+const INSTALL_LOCK_KEY = "INSTALL_LOCKED";
+
+async function isInstallLocked(): Promise<boolean> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", INSTALL_LOCK_KEY)
+      .maybeSingle();
+    return data?.value === "true";
+  } catch {
+    return false;
+  }
+}
+
 async function countAdmins(): Promise<number> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -63,7 +79,8 @@ export const getInstallStatus = createServerFn({ method: "GET" }).handler(async 
     // ignore — return zeros so wizard still renders
   }
 
-  return { env, bridgeReachable, bridgeError, adminCount, userCount };
+  const locked = await isInstallLocked();
+  return { env, bridgeReachable, bridgeError, adminCount, userCount, locked };
 });
 
 // Save runtime configuration. First-run (no admin exists) is open so a fresh
@@ -78,6 +95,7 @@ const SaveSchema = z.object({
 export const saveInstallSecrets = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => SaveSchema.parse(data))
   .handler(async ({ data }) => {
+    if (await isInstallLocked()) throw new Error("Installer is locked.");
     const admins = await countAdmins();
     if (admins > 0) {
       // Lock down after first admin: require authenticated admin.
@@ -127,6 +145,7 @@ const AdminSchema = z.object({
 export const createFirstAdmin = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AdminSchema.parse(data))
   .handler(async ({ data }) => {
+    if (await isInstallLocked()) throw new Error("Installer is locked.");
     const admins = await countAdmins();
     if (admins > 0) {
       throw new Error("An admin already exists. Sign in instead.");
@@ -203,3 +222,35 @@ export const validateSupabaseCreds = createServerFn({ method: "POST" })
     }
     return out;
   });
+
+/* ----------------------------- Lock installer ---------------------------- */
+// Permanently disables the /install wizard. Admin-only. After locking, the
+// wizard cannot be re-run unless an admin manually clears the
+// INSTALL_LOCKED row from app_settings.
+export const lockInstaller = createServerFn({ method: "POST" }).handler(async () => {
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const auth = getRequest()?.headers?.get("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token) throw new Error("Sign in as admin to lock the installer.");
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: userRes, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !userRes?.user) throw new Error("Invalid session.");
+  const { data: isAdmin } = await (supabaseAdmin.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: boolean | null }>)("has_role", {
+    _user_id: userRes.user.id,
+    _role: "admin",
+  });
+  if (!isAdmin) throw new Error("Admin role required.");
+
+  const { error: upErr } = await supabaseAdmin
+    .from("app_settings")
+    .upsert({ key: INSTALL_LOCK_KEY, value: "true" }, { onConflict: "key" });
+  if (upErr) throw new Error(upErr.message);
+
+  const { invalidateConfigCache } = await import("@/lib/runtime-config.server");
+  invalidateConfigCache();
+  return { ok: true, locked: true };
+});
