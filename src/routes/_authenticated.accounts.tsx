@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Phone, RefreshCw, Power } from "lucide-react";
+import { Plus, Phone, RefreshCw, Power, Key, Copy, Trash2 } from "lucide-react";
 import { createAccount, requestQr, disconnectAccount, updateAccountSettings } from "@/lib/accounts.functions";
+import { createApiKey, listApiKeys, revokeApiKey } from "@/lib/api-keys.functions";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
@@ -247,6 +248,7 @@ function AccountCard({ account }: { account: Account }) {
         <Button size="sm" variant="ghost" onClick={() => setExpanded(!expanded)}>
           {expanded ? "Hide" : "Settings"}
         </Button>
+        <ApiKeysButton accountId={account.id} accountLabel={account.label} />
       </div>
 
       {qr && account.status !== "connected" && (
