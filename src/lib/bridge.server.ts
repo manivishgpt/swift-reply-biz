@@ -76,7 +76,14 @@ export const bridge = {
     call<{ qr: string | null; status: string }>(`/sessions/${accountId}/qr`),
   status: (accountId: string) =>
     call<{ status: string; phone?: string }>(`/sessions/${accountId}/status`),
-  logout: (accountId: string) => call(`/sessions/${accountId}`, { method: "DELETE" }),
+  logout: (accountId: string) => {
+    // Log a stack trace so we can identify every caller of DELETE in production.
+    console.warn(
+      `[bridge] !! DELETE /sessions/${accountId} invoked — this will log the WhatsApp session out and wipe credentials. Caller stack:\n` +
+        new Error("bridge.logout caller trace").stack,
+    );
+    return call(`/sessions/${accountId}`, { method: "DELETE" });
+  },
   send: (accountId: string, payload: { to: string; type: "text" | "image"; body?: string; mediaUrl?: string }) =>
     call<{ wa_message_id: string }>(`/sessions/${accountId}/send`, { method: "POST", json: payload }),
 };
