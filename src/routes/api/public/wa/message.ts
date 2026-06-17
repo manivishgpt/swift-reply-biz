@@ -163,7 +163,23 @@ async function runAutoReply(args: {
 
   // 2. AI fallback
   if (!reply && acct.ai_enabled && text) {
-    reply = await generateAiReply(acct.ai_prompt ?? "", text);
+    // Fetch last ~10 messages of this conversation for context
+    const { data: history } = await supabaseAdmin
+      .from("messages")
+      .select("direction, body, created_at")
+      .eq("conversation_id", conversationId)
+      .not("body", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    const chatHistory = (history ?? [])
+      .reverse()
+      .map((m) => ({
+        role: m.direction === "in" ? ("user" as const) : ("assistant" as const),
+        content: m.body as string,
+      }));
+
+    reply = await generateAiReply(acct.ai_prompt ?? "", chatHistory, text);
   }
 
   if (!reply) return;
@@ -205,12 +221,28 @@ async function runAutoReply(args: {
   }
 }
 
-async function generateAiReply(systemPrompt: string, userText: string): Promise<string | null> {
+async function generateAiReply(
+  systemPrompt: string,
+  history: { role: "user" | "assistant"; content: string }[],
+  userText: string,
+): Promise<string | null> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
     console.warn("[auto-reply] LOVABLE_API_KEY missing — skipping AI reply");
     return null;
   }
+  const system =
+    (systemPrompt?.trim() ||
+      "You are a helpful WhatsApp assistant. Reply concisely in the same language as the user.") +
+    "\n\nIMPORTANT: Read the user's latest message carefully and the prior conversation context. Understand intent before replying. Keep the reply short, relevant, and natural — no greetings unless the user greeted first.";
+
+  // Ensure last message is the current user text (avoid duplicate if history already contains it)
+  const msgs = [...history];
+  const last = msgs[msgs.length - 1];
+  if (!last || last.role !== "user" || last.content !== userText) {
+    msgs.push({ role: "user", content: userText });
+  }
+
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -220,10 +252,7 @@ async function generateAiReply(systemPrompt: string, userText: string): Promise<
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt || "You are a helpful WhatsApp assistant. Reply concisely." },
-          { role: "user", content: userText },
-        ],
+        messages: [{ role: "system", content: system }, ...msgs],
       }),
     });
     if (!res.ok) {
