@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Check, CheckCircle2, AlertTriangle, Copy, RefreshCw, ExternalLink,
-  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound,
+  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound, Database,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getInstallStatus, saveInstallSecrets, createFirstAdmin } from "@/lib/install.functions";
+import { getInstallStatus, saveInstallSecrets, createFirstAdmin, validateSupabaseCreds } from "@/lib/install.functions";
 
 export const Route = createFileRoute("/install")({
   ssr: false,
@@ -27,9 +27,10 @@ export const Route = createFileRoute("/install")({
   component: InstallWizard,
 });
 
-type StepKey = "welcome" | "secrets" | "bridge" | "domain" | "admin" | "done";
+type StepKey = "welcome" | "supabase" | "secrets" | "bridge" | "domain" | "admin" | "done";
 const STEPS: { key: StepKey; title: string; icon: typeof Sparkles }[] = [
   { key: "welcome", title: "Welcome", icon: Sparkles },
+  { key: "supabase", title: "Database", icon: Database },
   { key: "secrets", title: "Secrets", icon: KeyRound },
   { key: "bridge", title: "Bridge", icon: Server },
   { key: "domain", title: "Domain", icon: Globe },
@@ -97,6 +98,13 @@ function InstallWizard() {
         {step === "welcome" && (
           <WelcomeStep
             userCount={status.data?.userCount ?? 0}
+            onNext={() => setStep("supabase")}
+          />
+        )}
+        {step === "supabase" && (
+          <SupabaseStep
+            supabaseUrlSet={status.data?.env.supabaseUrl ?? false}
+            onBack={() => setStep("welcome")}
             onNext={() => setStep("secrets")}
           />
         )}
@@ -105,7 +113,7 @@ function InstallWizard() {
             env={status.data?.env}
             loading={status.isLoading}
             onRefresh={() => status.refetch()}
-            onBack={() => setStep("welcome")}
+            onBack={() => setStep("supabase")}
             onNext={() => setStep("bridge")}
           />
         )}
