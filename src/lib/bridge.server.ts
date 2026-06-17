@@ -41,8 +41,8 @@ async function call<T = unknown>(path: string, init: RequestInit & { json?: unkn
 }
 
 export const bridge = {
-  startSession: (accountId: string) =>
-    call(`/sessions`, { method: "POST", json: { accountId } }),
+  startSession: (accountId: string, opts: { reset?: boolean } = {}) =>
+    call(`/sessions`, { method: "POST", json: { accountId, reset: opts.reset ?? false } }),
   getQr: (accountId: string) =>
     call<{ qr: string | null; status: string }>(`/sessions/${accountId}/qr`),
   status: (accountId: string) =>
