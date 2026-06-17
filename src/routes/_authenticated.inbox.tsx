@@ -179,10 +179,14 @@ function Thread({ conversationId }: { conversationId: string }) {
     e.preventDefault();
     if (!draft.trim() || busy) return;
     setBusy(true);
+    const text = draft.trim();
+    console.log("[inbox] send click", { conversationId, length: text.length });
     try {
-      await sendFn({ data: { conversationId, body: draft.trim() } });
+      const res = await sendFn({ data: { conversationId, body: text } });
+      console.log("[inbox] send OK", res);
       setDraft("");
     } catch (e) {
+      console.error("[inbox] send FAILED", e);
       toast.error(e instanceof Error ? e.message : "Failed to send");
     } finally {
       setBusy(false);
