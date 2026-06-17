@@ -3,6 +3,7 @@ import {
   assertAccountOwnership,
   authenticatePublicApi,
 } from "@/lib/public-api-auth.server";
+import { corsPreflight, withCors } from "@/lib/public-api-cors";
 
 // POST /api/public/v1/accounts/:accountId/disconnect
 // Explicit user action — logs the WhatsApp session out on the bridge and
@@ -10,6 +11,7 @@ import {
 export const Route = createFileRoute("/api/public/v1/accounts/$accountId/disconnect")({
   server: {
     handlers: {
+      OPTIONS: async () => corsPreflight(),
       POST: async ({ request, params }) => {
         const a = await authenticatePublicApi(request);
         if (!a.ok) return a.response;
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/api/public/v1/accounts/$accountId/disconn
           .update({ status: "disconnected", last_qr: null })
           .eq("id", params.accountId);
 
-        return Response.json({ ok: true, status: "disconnected" });
+        return withCors(Response.json({ ok: true, status: "disconnected" }));
       },
     },
   },

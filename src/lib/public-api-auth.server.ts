@@ -8,10 +8,12 @@ export type PublicApiAuth = {
   accountId: string | null;
 };
 
+import { CORS_HEADERS } from "./public-api-cors";
+
 export function jsonError(status: number, code: string, message: string) {
   return new Response(JSON.stringify({ error: { code, message } }), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
 

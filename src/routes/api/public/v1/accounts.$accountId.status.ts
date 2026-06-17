@@ -3,6 +3,7 @@ import {
   assertAccountOwnership,
   authenticatePublicApi,
 } from "@/lib/public-api-auth.server";
+import { corsPreflight, withCors } from "@/lib/public-api-cors";
 
 // GET /api/public/v1/accounts/:accountId/status
 // Returns the current pairing/connection state plus the latest QR (if any).
@@ -10,6 +11,7 @@ import {
 export const Route = createFileRoute("/api/public/v1/accounts/$accountId/status")({
   server: {
     handlers: {
+      OPTIONS: async () => corsPreflight(),
       GET: async ({ request, params }) => {
         const a = await authenticatePublicApi(request);
         if (!a.ok) return a.response;
@@ -24,14 +26,14 @@ export const Route = createFileRoute("/api/public/v1/accounts/$accountId/status"
           .eq("id", params.accountId)
           .single();
 
-        return Response.json({
+        return withCors(Response.json({
           ok: true,
           account: data,
           qr: data?.last_qr ?? null,
           qr_image_url: data?.last_qr
             ? `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(data.last_qr)}`
             : null,
-        });
+        }));
       },
     },
   },

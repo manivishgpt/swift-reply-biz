@@ -4,6 +4,7 @@ import {
   authenticatePublicApi,
   jsonError,
 } from "@/lib/public-api-auth.server";
+import { corsPreflight, withCors } from "@/lib/public-api-cors";
 
 // POST /api/public/v1/accounts/:accountId/connect
 // Asks the bridge to start a session and returns the pairing QR string.
@@ -12,6 +13,7 @@ import {
 export const Route = createFileRoute("/api/public/v1/accounts/$accountId/connect")({
   server: {
     handlers: {
+      OPTIONS: async () => corsPreflight(),
       POST: async ({ request, params }) => {
         const a = await authenticatePublicApi(request);
         if (!a.ok) return a.response;
@@ -25,12 +27,12 @@ export const Route = createFileRoute("/api/public/v1/accounts/$accountId/connect
         try {
           if (own.account.status === "connected") {
             const r = await bridge.getQr(params.accountId);
-            return Response.json({
+            return withCors(Response.json({
               ok: true,
               status: r.status ?? "connected",
               qr: r.qr ?? null,
               already_connected: true,
-            });
+            }));
           }
 
           await bridge.startSession(params.accountId, { reset: true });
@@ -53,7 +55,7 @@ export const Route = createFileRoute("/api/public/v1/accounts/$accountId/connect
               .eq("id", params.accountId);
           }
 
-          return Response.json({
+          return withCors(Response.json({
             ok: true,
             status: result.status ?? "qr",
             qr: result.qr ?? null,
@@ -61,7 +63,7 @@ export const Route = createFileRoute("/api/public/v1/accounts/$accountId/connect
               ? `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(result.qr)}`
               : null,
             poll: `/api/public/v1/accounts/${params.accountId}/status`,
-          });
+          }));
         } catch (e) {
           return jsonError(502, "bridge_error", e instanceof Error ? e.message : "Bridge unreachable");
         }

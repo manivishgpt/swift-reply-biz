@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { authenticatePublicApi, jsonError } from "@/lib/public-api-auth.server";
+import { corsPreflight, withCors } from "@/lib/public-api-cors";
 
 const CreateSchema = z.object({
   label: z.string().trim().min(1).max(80),
@@ -14,6 +15,7 @@ const CreateSchema = z.object({
 export const Route = createFileRoute("/api/public/v1/accounts")({
   server: {
     handlers: {
+      OPTIONS: async () => corsPreflight(),
       POST: async ({ request }) => {
         const a = await authenticatePublicApi(request);
         if (!a.ok) return a.response;
@@ -51,7 +53,7 @@ export const Route = createFileRoute("/api/public/v1/accounts")({
         });
         if (keyErr) return jsonError(500, "db_error", keyErr.message);
 
-        return Response.json({
+        return withCors(Response.json({
           ok: true,
           account: { id: acct.id, label: acct.label, status: acct.status },
           api_key: { key: plaintext, prefix },
@@ -60,7 +62,7 @@ export const Route = createFileRoute("/api/public/v1/accounts")({
             status: `/api/public/v1/accounts/${acct.id}/status`,
             send: `/api/public/v1/messages`,
           },
-        });
+        }));
       },
     },
   },
