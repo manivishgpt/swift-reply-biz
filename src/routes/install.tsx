@@ -429,13 +429,34 @@ function AdminStep({
   onNext: () => void;
 }) {
   const exists = adminCount > 0;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const createFn = useServerFn(createFirstAdmin);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await createFn({ data: { email, password, fullName: fullName || undefined } });
+      toast.success("Admin created! You can now sign in.");
+      setEmail(""); setPassword(""); setFullName("");
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create admin");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <Card className="p-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">First admin account</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            The very first signup becomes the admin. After that, additional users sign up as regular agents.
+            Create the first administrator. After this, additional users sign up as agents.
           </p>
         </div>
         <Badge className={exists ? "bg-primary/15 text-primary" : "bg-yellow-500/15 text-yellow-700"}>
@@ -443,26 +464,40 @@ function AdminStep({
         </Badge>
       </div>
 
-      <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm">
-        <p className="font-medium">How it works</p>
-        <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
-          <li>Click <b>Create admin</b> below — it opens the signup page.</li>
-          <li>Sign up with your work email and password.</li>
-          <li>Return here and click <b>Re-check</b>. Admin count should be 1.</li>
-        </ol>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button asChild>
-          <Link to="/auth" search={{ mode: "signup" }}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            {exists ? "Sign in" : "Create admin"}
-          </Link>
-        </Button>
-        <Button variant="outline" onClick={onRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />Re-check
-        </Button>
-      </div>
+      {exists ? (
+        <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+          <p>Admin already exists. You can sign in to manage the instance.</p>
+          <div className="mt-3 flex gap-2">
+            <Button asChild><Link to="/auth">Sign in</Link></Button>
+            <Button variant="outline" onClick={onRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />Re-check
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <div>
+            <Label htmlFor="admin-name">Full name (optional)</Label>
+            <Input id="admin-name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" autoComplete="name" />
+          </div>
+          <div>
+            <Label htmlFor="admin-email">Email</Label>
+            <Input id="admin-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@yourdomain.com" autoComplete="email" />
+          </div>
+          <div>
+            <Label htmlFor="admin-pass">Password (min 8 characters)</Label>
+            <Input id="admin-pass" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={creating}>
+              <UserPlus className="mr-2 h-4 w-4" />{creating ? "Creating…" : "Create admin"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />Re-check
+            </Button>
+          </div>
+        </form>
+      )}
 
       <div className="mt-8 flex items-center justify-between">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
