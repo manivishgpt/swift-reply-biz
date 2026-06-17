@@ -6,10 +6,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Send, Inbox as InboxIcon } from "lucide-react";
-import { sendMessage, markConversationRead } from "@/lib/inbox.functions";
+import { Send, Inbox as InboxIcon, Plus } from "lucide-react";
+import { sendMessage, markConversationRead, startConversation } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   component: InboxPage,
@@ -67,9 +85,17 @@ function InboxPage() {
   return (
     <div className="grid h-screen grid-cols-[340px_1fr]">
       <aside className="flex flex-col border-r border-border bg-card">
-        <div className="border-b border-border px-4 py-4">
-          <h2 className="font-semibold">Inbox</h2>
-          <p className="text-xs text-muted-foreground">{conversations.data?.length ?? 0} conversations</p>
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-4">
+          <div>
+            <h2 className="font-semibold">Inbox</h2>
+            <p className="text-xs text-muted-foreground">{conversations.data?.length ?? 0} conversations</p>
+          </div>
+          <NewChatDialog
+            onCreated={(convId) => {
+              setSelectedId(convId);
+              queryClient.invalidateQueries({ queryKey: ["conversations"] });
+            }}
+          />
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.isLoading ? (
