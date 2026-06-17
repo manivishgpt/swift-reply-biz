@@ -47,7 +47,10 @@ function ContactDetail() {
   });
 
   async function saveStage(stage: string) {
-    const { error } = await supabase.from("contacts").update({ pipeline_stage: stage }).eq("id", id);
+    const { error } = await supabase
+      .from("contacts")
+      .update({ pipeline_stage: stage as "new" | "qualified" | "customer" | "lost" })
+      .eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Stage updated");
     queryClient.invalidateQueries({ queryKey: ["contact", id] });
