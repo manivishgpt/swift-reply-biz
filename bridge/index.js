@@ -87,7 +87,16 @@ async function sendWebhook(endpoint, payload) {
 }
 
 // Initialize/Start a WhatsApp Baileys session
-async function startWhatsAppSession(accountId) {
+async function startWhatsAppSession(accountId, { reset = false } = {}) {
+  if (reset && sessions[accountId]) {
+    try { await sessions[accountId].sock.logout(); } catch {}
+    try { sessions[accountId].sock.end?.(); } catch {}
+    delete sessions[accountId];
+  }
+  if (reset) {
+    const authFolder = path.join(process.cwd(), 'auth_states', accountId);
+    try { fs.rmSync(authFolder, { recursive: true, force: true }); } catch {}
+  }
   if (sessions[accountId]) {
     return sessions[accountId];
   }
@@ -206,11 +215,11 @@ async function startWhatsAppSession(accountId) {
 
 // 1. Start session
 app.post('/sessions', verifySignature, async (req, res) => {
-  const { accountId } = req.body;
+  const { accountId, reset } = req.body;
   if (!accountId) return res.status(400).send("accountId is required");
   
   try {
-    await startWhatsAppSession(accountId);
+    await startWhatsAppSession(accountId, { reset: Boolean(reset) });
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
