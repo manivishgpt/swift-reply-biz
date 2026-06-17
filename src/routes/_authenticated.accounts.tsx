@@ -52,7 +52,32 @@ function AccountsPage() {
       if (error) throw error;
       return (data ?? []) as unknown as Account[];
     },
+    // Poll every 2s while any account is mid-pairing (qr/connecting) so the
+    // card flips to "connected" the instant the bridge webhook updates the row.
+    refetchInterval: (query) => {
+      const rows = (query.state.data ?? []) as Account[];
+      const pairing = rows.some((r) => r.status === "qr" || r.status === "connecting" || r.last_qr);
+      return pairing ? 2000 : false;
+    },
+    refetchOnWindowFocus: true,
   });
+
+  // Realtime: instantly reflect status changes pushed by the bridge webhook.
+  useEffect(() => {
+    const channel = supabase
+      .channel("wa_accounts_status")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "wa_accounts" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["accounts"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return (
     <div className="p-8">
