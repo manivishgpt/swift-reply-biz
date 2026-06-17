@@ -20,6 +20,9 @@ import { Route as AuthenticatedBroadcastsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated.accounts'
 import { Route as AuthenticatedContactsIdRouteImport } from './routes/_authenticated.contacts.$id'
+import { Route as ApiPublicWaStatusRouteImport } from './routes/api/public/wa/status'
+import { Route as ApiPublicWaMessageRouteImport } from './routes/api/public/wa/message'
+import { Route as ApiPublicWaDeliveryRouteImport } from './routes/api/public/wa/delivery'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -75,6 +78,21 @@ const AuthenticatedContactsIdRoute = AuthenticatedContactsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedContactsRoute,
 } as any)
+const ApiPublicWaStatusRoute = ApiPublicWaStatusRouteImport.update({
+  id: '/api/public/wa/status',
+  path: '/api/public/wa/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWaMessageRoute = ApiPublicWaMessageRouteImport.update({
+  id: '/api/public/wa/message',
+  path: '/api/public/wa/message',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWaDeliveryRoute = ApiPublicWaDeliveryRouteImport.update({
+  id: '/api/public/wa/delivery',
+  path: '/api/public/wa/delivery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -87,6 +105,9 @@ export interface FileRoutesByFullPath {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
+  '/api/public/wa/message': typeof ApiPublicWaMessageRoute
+  '/api/public/wa/status': typeof ApiPublicWaStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -99,6 +120,9 @@ export interface FileRoutesByTo {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
+  '/api/public/wa/message': typeof ApiPublicWaMessageRoute
+  '/api/public/wa/status': typeof ApiPublicWaStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,6 +137,9 @@ export interface FileRoutesById {
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
+  '/api/public/wa/message': typeof ApiPublicWaMessageRoute
+  '/api/public/wa/status': typeof ApiPublicWaStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,6 +154,9 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/wa/delivery'
+    | '/api/public/wa/message'
+    | '/api/public/wa/status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -139,6 +169,9 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/wa/delivery'
+    | '/api/public/wa/message'
+    | '/api/public/wa/status'
   id:
     | '__root__'
     | '/'
@@ -152,12 +185,18 @@ export interface FileRouteTypes {
     | '/_authenticated/rules'
     | '/_authenticated/settings'
     | '/_authenticated/contacts/$id'
+    | '/api/public/wa/delivery'
+    | '/api/public/wa/message'
+    | '/api/public/wa/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicWaDeliveryRoute: typeof ApiPublicWaDeliveryRoute
+  ApiPublicWaMessageRoute: typeof ApiPublicWaMessageRoute
+  ApiPublicWaStatusRoute: typeof ApiPublicWaStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -239,6 +278,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContactsIdRouteImport
       parentRoute: typeof AuthenticatedContactsRoute
     }
+    '/api/public/wa/status': {
+      id: '/api/public/wa/status'
+      path: '/api/public/wa/status'
+      fullPath: '/api/public/wa/status'
+      preLoaderRoute: typeof ApiPublicWaStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/wa/message': {
+      id: '/api/public/wa/message'
+      path: '/api/public/wa/message'
+      fullPath: '/api/public/wa/message'
+      preLoaderRoute: typeof ApiPublicWaMessageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/wa/delivery': {
+      id: '/api/public/wa/delivery'
+      path: '/api/public/wa/delivery'
+      fullPath: '/api/public/wa/delivery'
+      preLoaderRoute: typeof ApiPublicWaDeliveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -283,6 +343,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicWaDeliveryRoute: ApiPublicWaDeliveryRoute,
+  ApiPublicWaMessageRoute: ApiPublicWaMessageRoute,
+  ApiPublicWaStatusRoute: ApiPublicWaStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

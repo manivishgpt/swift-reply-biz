@@ -25,7 +25,12 @@ export const Route = createFileRoute("/api/public/wa/status")({
         }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin.from("webhook_events").insert({ kind: "status", payload: parsed });
-        const patch: Record<string, unknown> = { status: parsed.status };
+        const patch: {
+          status: typeof parsed.status;
+          phone?: string;
+          last_qr?: string | null;
+          last_qr_at?: string | null;
+        } = { status: parsed.status };
         if (parsed.phone) patch.phone = parsed.phone;
         if (parsed.qr !== undefined) {
           patch.last_qr = parsed.qr;
