@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Check, CheckCircle2, AlertTriangle, Copy, RefreshCw, ExternalLink,
-  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound,
+  ArrowLeft, ArrowRight, Sparkles, Server, Globe, UserPlus, PartyPopper, KeyRound, Database,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getInstallStatus, saveInstallSecrets, createFirstAdmin } from "@/lib/install.functions";
+import { getInstallStatus, saveInstallSecrets, createFirstAdmin, validateSupabaseCreds } from "@/lib/install.functions";
 
 export const Route = createFileRoute("/install")({
   ssr: false,
@@ -27,9 +27,10 @@ export const Route = createFileRoute("/install")({
   component: InstallWizard,
 });
 
-type StepKey = "welcome" | "secrets" | "bridge" | "domain" | "admin" | "done";
+type StepKey = "welcome" | "supabase" | "secrets" | "bridge" | "domain" | "admin" | "done";
 const STEPS: { key: StepKey; title: string; icon: typeof Sparkles }[] = [
   { key: "welcome", title: "Welcome", icon: Sparkles },
+  { key: "supabase", title: "Database", icon: Database },
   { key: "secrets", title: "Secrets", icon: KeyRound },
   { key: "bridge", title: "Bridge", icon: Server },
   { key: "domain", title: "Domain", icon: Globe },
@@ -97,6 +98,13 @@ function InstallWizard() {
         {step === "welcome" && (
           <WelcomeStep
             userCount={status.data?.userCount ?? 0}
+            onNext={() => setStep("supabase")}
+          />
+        )}
+        {step === "supabase" && (
+          <SupabaseStep
+            supabaseUrlSet={status.data?.env.supabaseUrl ?? false}
+            onBack={() => setStep("welcome")}
             onNext={() => setStep("secrets")}
           />
         )}
@@ -105,7 +113,7 @@ function InstallWizard() {
             env={status.data?.env}
             loading={status.isLoading}
             onRefresh={() => status.refetch()}
-            onBack={() => setStep("welcome")}
+            onBack={() => setStep("supabase")}
             onNext={() => setStep("bridge")}
           />
         )}
@@ -522,6 +530,167 @@ function DoneStep() {
       <div className="mt-6 flex justify-center gap-2">
         <Button onClick={() => navigate({ to: "/auth" })}>Sign in</Button>
         <Button variant="outline" onClick={() => navigate({ to: "/" })}>Go home</Button>
+      </div>
+    </Card>
+  );
+}
+
+/* -------------------------------- Supabase -------------------------------- */
+function SupabaseStep({
+  supabaseUrlSet, onBack, onNext,
+}: {
+  supabaseUrlSet: boolean;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const [url, setUrl] = useState("");
+  const [anonKey, setAnonKey] = useState("");
+  const [serviceRoleKey, setServiceRoleKey] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<null | {
+    urlReachable: boolean;
+    anonKeyValid: boolean;
+    serviceRoleKeyValid: boolean | null;
+    error: string | null;
+  }>(null);
+  const validateFn = useServerFn(validateSupabaseCreds);
+
+  async function test() {
+    if (!url || !anonKey) {
+      toast.info("Enter URL and anon key first");
+      return;
+    }
+    setTesting(true);
+    try {
+      const r = await validateFn({ data: { url, anonKey, serviceRoleKey: serviceRoleKey || undefined } });
+      setResult(r);
+      if (r.urlReachable && r.anonKeyValid && (r.serviceRoleKeyValid === null || r.serviceRoleKeyValid)) {
+        toast.success("Supabase credentials look good");
+      } else {
+        toast.error(r.error ?? "Validation failed — check the values");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Validation failed");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  const envBlock =
+    `SUPABASE_URL="${url || "https://YOUR-PROJECT.supabase.co"}"\n` +
+    `SUPABASE_PUBLISHABLE_KEY="${anonKey || "YOUR-ANON-KEY"}"\n` +
+    `SUPABASE_SERVICE_ROLE_KEY="${serviceRoleKey || "YOUR-SERVICE-ROLE-KEY"}"\n` +
+    `VITE_SUPABASE_URL="${url || "https://YOUR-PROJECT.supabase.co"}"\n` +
+    `VITE_SUPABASE_PUBLISHABLE_KEY="${anonKey || "YOUR-ANON-KEY"}"`;
+
+  function copy(t: string) {
+    navigator.clipboard.writeText(t).then(() => toast.success("Copied"));
+  }
+
+  return (
+    <Card className="p-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Database (Supabase)</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Enter your Supabase project credentials. We&apos;ll test them and give you a ready-to-paste env block.
+          </p>
+        </div>
+        <Badge className={supabaseUrlSet ? "bg-primary/15 text-primary" : "bg-yellow-500/15 text-yellow-700"}>
+          {supabaseUrlSet ? "URL detected" : "not set"}
+        </Badge>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        <div>
+          <Label htmlFor="sb-url">Project URL</Label>
+          <Input
+            id="sb-url"
+            type="url"
+            placeholder="https://xxxxx.supabase.co"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="font-mono text-xs"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            From your Supabase dashboard → Project Settings → API → Project URL.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="sb-anon">Publishable / Anon Key</Label>
+          <Input
+            id="sb-anon"
+            type="password"
+            placeholder="eyJhbGciOi…"
+            value={anonKey}
+            onChange={(e) => setAnonKey(e.target.value)}
+            className="font-mono text-xs"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Safe for the browser. Project Settings → API → <code>anon public</code>.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="sb-srv">Service Role Key</Label>
+          <Input
+            id="sb-srv"
+            type="password"
+            placeholder="eyJhbGciOi… (server-only)"
+            value={serviceRoleKey}
+            onChange={(e) => setServiceRoleKey(e.target.value)}
+            className="font-mono text-xs"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            <b>Never expose this in the browser.</b> Only used by server functions for admin tasks.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <Button onClick={test} disabled={testing}>
+          {testing ? "Testing…" : "Test connection"}
+        </Button>
+      </div>
+
+      {result && (
+        <div className="mt-4 space-y-1 rounded-lg border border-border p-3 text-xs">
+          <div className="flex items-center gap-2">
+            {result.urlReachable ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />}
+            Project URL reachable
+          </div>
+          <div className="flex items-center gap-2">
+            {result.anonKeyValid ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />}
+            Anon key accepted
+          </div>
+          <div className="flex items-center gap-2">
+            {result.serviceRoleKeyValid === null
+              ? <span className="h-3.5 w-3.5 rounded-full border border-muted-foreground/40" />
+              : result.serviceRoleKeyValid
+                ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                : <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />}
+            Service role key {result.serviceRoleKeyValid === null ? "(skipped)" : ""}
+          </div>
+          {result.error && <div className="mt-2 text-destructive">{result.error}</div>}
+        </div>
+      )}
+
+      <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-medium">Copy this into your hosting platform&apos;s env vars</span>
+          <Button size="sm" variant="ghost" onClick={() => copy(envBlock)}>
+            <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+          </Button>
+        </div>
+        <pre className="overflow-x-auto whitespace-pre rounded bg-background p-2 font-mono text-[11px] leading-relaxed">{envBlock}</pre>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Add these to Cloudflare Workers / Render / Docker env, then redeploy. The frontend reads
+          Supabase credentials from environment variables at startup — they can&apos;t be hot-swapped from the UI.
+        </p>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between">
+        <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
+        <Button onClick={onNext}>Next <ArrowRight className="ml-2 h-4 w-4" /></Button>
       </div>
     </Card>
   );
