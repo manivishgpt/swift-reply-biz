@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Plus, Phone, RefreshCw, Power } from "lucide-react";
 import { createAccount, requestQr, disconnectAccount, updateAccountSettings } from "@/lib/accounts.functions";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
   component: AccountsPage,
@@ -130,6 +131,14 @@ function AccountCard({ account }: { account: Account }) {
   const [autoReply, setAutoReply] = useState(account.auto_reply_enabled);
   const [qr, setQr] = useState<string | null>(account.last_qr);
   const [busy, setBusy] = useState<string | null>(null);
+  const [qrAt, setQrAt] = useState<number | null>(account.last_qr ? Date.now() : null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!qr) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [qr]);
 
   const reqQrFn = useServerFn(requestQr);
   const disconnectFn = useServerFn(disconnectAccount);
@@ -140,6 +149,7 @@ function AccountCard({ account }: { account: Account }) {
     try {
       const r = await reqQrFn({ data: { accountId: account.id } });
       setQr(r.qr);
+      setQrAt(r.qr ? Date.now() : null);
       toast.success(r.qr ? "Scan the QR with WhatsApp" : "Session already started");
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
     } catch (e) {
@@ -216,6 +226,17 @@ function AccountCard({ account }: { account: Account }) {
             className="mx-auto h-48 w-48"
             src={`https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(qr)}`}
           />
+          {qrAt && (() => {
+            const elapsed = Math.floor((now - qrAt) / 1000);
+            const remaining = Math.max(0, 60 - elapsed);
+            return (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {remaining > 0
+                  ? <>New QR in <span className="font-medium text-foreground">{remaining}s</span></>
+                  : <>QR expired — click Connect to get a fresh one</>}
+              </p>
+            );
+          })()}
         </div>
       )}
 
