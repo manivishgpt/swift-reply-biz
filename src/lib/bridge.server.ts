@@ -20,11 +20,22 @@ function signBody(secret: string, body: string) {
 async function call<T = unknown>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { url, secret } = requireBridge();
   const body = init.json !== undefined ? JSON.stringify(init.json) : (init.body as string | undefined);
-  const headers = new Headers(init.headers as HeadersInit | undefined);
-  headers.set("Content-Type", "application/json");
-  headers.set("X-Wapix-Signature", signBody(secret, body ?? ""));
-  const res = await fetch(`${url}${path}`, { ...init, body, headers });
-  const text = await res.text();
+  const request = async (signatureBody: string) => {
+    const headers = new Headers(init.headers as HeadersInit | undefined);
+    headers.set("Content-Type", "application/json");
+    headers.set("X-Wapix-Signature", signBody(secret, signatureBody));
+    const res = await fetch(`${url}${path}`, { ...init, body, headers });
+    return { res, text: await res.text() };
+  };
+
+  let { res, text } = await request(body ?? "");
+
+  // Older bridge deployments signed empty GET/DELETE requests as "{}" because
+  // Express populated req.body with an empty object. Retry once for compatibility.
+  if (!res.ok && res.status === 401 && body === undefined && text.includes("Invalid signature")) {
+    ({ res, text } = await request("{}"));
+  }
+
   if (!res.ok) throw new Error(`Bridge ${path} failed: ${res.status} ${text}`);
   return text ? (JSON.parse(text) as T) : ({} as T);
 }
