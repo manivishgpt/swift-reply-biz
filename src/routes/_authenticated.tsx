@@ -52,8 +52,17 @@ function AuthedLayout() {
     navigate({ to: "/auth", replace: true });
   }
 
-  const display = profile?.full_name ?? profile?.email ?? user.email ?? "You";
-  const initials = display.split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase();
+  const display: string =
+    (profile?.full_name as string | null | undefined) ??
+    (profile?.email as string | null | undefined) ??
+    user.email ??
+    "You";
+  const initials = display
+    .split(" ")
+    .map((s: string) => s[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="grid min-h-screen grid-cols-[260px_1fr] bg-background">
