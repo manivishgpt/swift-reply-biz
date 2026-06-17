@@ -451,6 +451,11 @@ async function restoreSessions() {
 
 app.listen(PORT, async () => {
   console.log(`WhatsApp Bridge listening on port ${PORT}`);
+  console.log(`[BOOT CONFIG]`, {
+    hasSharedSecret: Boolean(BRIDGE_SHARED_SECRET),
+    webhookUrl: WEBHOOK_URL || '(unset)',
+    hasWebhookSecret: Boolean(WEBHOOK_SECRET),
+  });
   await restoreSessions();
 
   // Watchdog: warn if no dashboard ever calls /sessions/:accountId/send
