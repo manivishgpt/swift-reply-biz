@@ -245,9 +245,9 @@ async function generateAiReply(
   history: { role: "user" | "assistant"; content: string }[],
   userText: string,
 ): Promise<string | null> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    console.warn("[auto-reply] LOVABLE_API_KEY missing — skipping AI reply");
+    console.warn("[auto-reply] OPENROUTER_API_KEY missing — skipping AI reply");
     return null;
   }
   // Use the user-provided system prompt verbatim when set, so custom
@@ -273,26 +273,52 @@ async function generateAiReply(
     msgs.push({ role: "user", content: userText });
   }
 
-  try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "system", content: system }, ...msgs],
-      }),
-    });
-    if (!res.ok) {
-      console.error("[auto-reply] AI gateway error:", res.status, await res.text());
-      return null;
+  // OpenRouter free-model fallback chain. If a model is rate-limited / over
+  // quota / returns 4xx-5xx, fall through to the next.
+  const FREE_MODELS = [
+    "google/gemini-2.0-flash-exp:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "deepseek/deepseek-chat-v3.1:free",
+    "qwen/qwen-2.5-72b-instruct:free",
+    "mistralai/mistral-small-3.2-24b-instruct:free",
+  ];
+
+  for (const model of FREE_MODELS) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": process.env.BRIDGE_BASE_URL ?? "https://wapix.app",
+          "X-Title": "Wapix Auto-Reply",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "system", content: system }, ...msgs],
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.warn("[auto-reply] OpenRouter model failed", { model, status: res.status, body: txt.slice(0, 300) });
+        // 401/403 = bad key — stop trying.
+        if (res.status === 401 || res.status === 403) return null;
+        continue;
+      }
+      const json = (await res.json()) as {
+        choices?: { message?: { content?: string } }[];
+        error?: { message?: string };
+      };
+      const out = json.choices?.[0]?.message?.content?.trim();
+      if (out) {
+        console.log("[auto-reply] OpenRouter ok", { model, len: out.length });
+        return out;
+      }
+      console.warn("[auto-reply] OpenRouter empty response", { model, error: json.error?.message });
+    } catch (e) {
+      console.error("[auto-reply] OpenRouter call failed", { model, error: (e as Error).message });
     }
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    return json.choices?.[0]?.message?.content?.trim() || null;
-  } catch (e) {
-    console.error("[auto-reply] AI call failed:", (e as Error).message);
-    return null;
   }
+  console.error("[auto-reply] all OpenRouter free models failed");
+  return null;
 }
