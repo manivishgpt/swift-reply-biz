@@ -311,21 +311,18 @@ async function startWhatsAppSession(accountId, { reset = false } = {}) {
 
       const isGroup = from.endsWith('@g.us');
       const incomingTs = new Date((msg.messageTimestamp || Date.now() / 1000) * 1000).toISOString();
-      console.log(
-        `\n========================\n` +
-        `INCOMING MESSAGE\n` +
-        `================\n\n` +
-        `Account ID : ${accountId}\n` +
-        `From Name  : ${display_name || '(unknown)'}\n` +
-        `From Phone : ${phone}\n` +
-        `From JID   : ${from}\n` +
-        `Is Group   : ${isGroup}\n` +
-        `Type       : ${type}\n` +
-        `Message    : ${body.slice(0, 1000)}\n` +
-        `WA Msg ID  : ${msg.key.id}\n` +
-        `Time       : ${incomingTs}\n` +
-        `=================================\n`
-      );
+      logIncomingMessage({
+        accountId,
+        phone,
+        jid: from,
+        pushName: display_name,
+        type,
+        body,
+        ts: incomingTs,
+      });
+      if (isGroup) {
+        process.stdout.write(`(group message, waMsgId=${msg.key.id})\n`);
+      }
 
       await sendWebhook('/api/public/wa/message', {
         accountId,
