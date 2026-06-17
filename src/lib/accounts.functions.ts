@@ -32,12 +32,18 @@ export const requestQr = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { bridge } = await import("./bridge.server");
-    await bridge.startSession(data.accountId);
+    // Always reset so user gets a fresh QR to scan
+    await bridge.startSession(data.accountId, { reset: true });
     await context.supabase
       .from("wa_accounts")
-      .update({ status: "connecting" })
+      .update({ status: "connecting", last_qr: null, last_qr_at: null })
       .eq("id", data.accountId);
-    const result = await bridge.getQr(data.accountId);
+    // Poll the bridge for the QR — Baileys emits it asynchronously after connect
+    let result = await bridge.getQr(data.accountId);
+    for (let i = 0; i < 15 && !result.qr; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      result = await bridge.getQr(data.accountId);
+    }
     if (result.qr) {
       await context.supabase
         .from("wa_accounts")
