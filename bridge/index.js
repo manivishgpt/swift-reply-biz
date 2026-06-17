@@ -216,17 +216,22 @@ async function startWhatsAppSession(accountId, { reset = false } = {}) {
       }
 
       const isGroup = from.endsWith('@g.us');
-      console.log(`[INCOMING MSG]`, {
-        accountId,
-        from,
-        fromName: display_name,
-        fromPhone: phone,
-        isGroup,
-        type,
-        waMessageId: msg.key.id,
-        bodyLen: body.length,
-        body: body.slice(0, 500),
-      });
+      const incomingTs = new Date((msg.messageTimestamp || Date.now() / 1000) * 1000).toISOString();
+      console.log(
+        `\n========================\n` +
+        `INCOMING MESSAGE\n` +
+        `================\n\n` +
+        `Account ID : ${accountId}\n` +
+        `From Name  : ${display_name || '(unknown)'}\n` +
+        `From Phone : ${phone}\n` +
+        `From JID   : ${from}\n` +
+        `Is Group   : ${isGroup}\n` +
+        `Type       : ${type}\n` +
+        `Message    : ${body.slice(0, 1000)}\n` +
+        `WA Msg ID  : ${msg.key.id}\n` +
+        `Time       : ${incomingTs}\n` +
+        `=================================\n`
+      );
 
       await sendWebhook('/api/public/wa/message', {
         accountId,
@@ -237,7 +242,7 @@ async function startWhatsAppSession(accountId, { reset = false } = {}) {
         type,
         mediaUrl,
         waMessageId: msg.key.id,
-        timestamp: new Date((msg.messageTimestamp || Date.now() / 1000) * 1000).toISOString()
+        timestamp: incomingTs
       });
     }
   });
@@ -306,27 +311,47 @@ app.delete('/sessions/:accountId', verifySignature, async (req, res) => {
 app.post('/sessions/:accountId/send', verifySignature, async (req, res) => {
   const { accountId } = req.params;
   const { to, type, body, mediaUrl } = req.body;
+  const reqTs = new Date().toISOString();
 
-  console.log(`[SEND REQUEST]`, {
-    accountId,
-    to,
-    type,
-    bodyLen: body?.length ?? 0,
-    bodyPreview: (body ?? '').slice(0, 300),
-    mediaUrl: mediaUrl ?? null,
-  });
+  console.log(
+    `\n[SEND REQUEST] ${reqTs}\n` +
+    `  accountId : ${accountId}\n` +
+    `  to        : ${to}\n` +
+    `  type      : ${type}\n` +
+    `  body      : ${(body ?? '').slice(0, 500)}\n` +
+    `  mediaUrl  : ${mediaUrl ?? '(none)'}\n`
+  );
 
   const session = sessions[accountId];
   if (!session || session.status !== 'connected') {
-    console.warn(`[SEND BLOCKED] session not connected`, {
-      accountId,
-      exists: Boolean(session),
-      status: session?.status,
-    });
-    return res.status(400).send("WhatsApp session is not connected");
+    const errMsg = `WhatsApp session is not connected (exists=${Boolean(session)}, status=${session?.status ?? 'none'})`;
+    console.warn(
+      `\n❌ MESSAGE FAILED\n` +
+      `From  : (session not ready)\n` +
+      `To    : ${to}\n` +
+      `Error : ${errMsg}\n`
+    );
+    const respBody = { error: errMsg };
+    console.log(`[SEND RESPONSE] status=400 body=${JSON.stringify(respBody)} time=${new Date().toISOString()}`);
+    return res.status(400).json(respBody);
   }
 
+  const fromPhone = session.phone || '(unknown)';
+  console.log(
+    `\n========================\n` +
+    `OUTGOING MESSAGE\n` +
+    `================\n\n` +
+    `Account ID : ${accountId}\n` +
+    `From Phone : ${fromPhone}\n` +
+    `To         : ${to}\n` +
+    `Type       : ${type}\n` +
+    `Message    : ${(body ?? '').slice(0, 1000)}\n` +
+    `Time       : ${reqTs}\n` +
+    `=================================\n`
+  );
+
   try {
+    console.log(`[bridge] -> calling sendMessage to=${to} type=${type}`);
     let sentMsg;
     if (type === 'image' && mediaUrl) {
       sentMsg = await session.sock.sendMessage(to, { image: { url: mediaUrl }, caption: body });
@@ -334,11 +359,26 @@ app.post('/sessions/:accountId/send', verifySignature, async (req, res) => {
       sentMsg = await session.sock.sendMessage(to, { text: body });
     }
 
-    console.log(`[SEND OK]`, { accountId, to, wa_message_id: sentMsg.key.id });
-    res.json({ wa_message_id: sentMsg.key.id });
+    console.log(
+      `\n✅ MESSAGE SENT\n` +
+      `From : ${fromPhone}\n` +
+      `To   : ${to}\n` +
+      `ID   : ${sentMsg.key.id}\n`
+    );
+    const respBody = { wa_message_id: sentMsg.key.id };
+    console.log(`[SEND RESPONSE] status=200 body=${JSON.stringify(respBody)} time=${new Date().toISOString()}`);
+    res.json(respBody);
   } catch (e) {
-    console.error(`[SEND FAILED]`, { accountId, to, error: e.message, stack: e.stack });
-    res.status(500).json({ error: e.message });
+    console.error(
+      `\n❌ MESSAGE FAILED\n` +
+      `From  : ${fromPhone}\n` +
+      `To    : ${to}\n` +
+      `Error : ${e.message}\n` +
+      `Stack : ${e.stack}\n`
+    );
+    const respBody = { error: e.message };
+    console.log(`[SEND RESPONSE] status=500 body=${JSON.stringify(respBody)} time=${new Date().toISOString()}`);
+    res.status(500).json(respBody);
   }
 });
 
@@ -368,4 +408,15 @@ async function restoreSessions() {
 app.listen(PORT, async () => {
   console.log(`WhatsApp Bridge listening on port ${PORT}`);
   await restoreSessions();
+
+  // Watchdog: warn if no dashboard ever calls /sessions/:accountId/send
+  setTimeout(() => {
+    if (!sendEndpointHitCount) {
+      console.warn(
+        `\n⚠️  WARNING: No send requests received yet.\n` +
+        `   The dashboard is NOT calling POST /sessions/:accountId/send on this bridge.\n` +
+        `   Verify BRIDGE_URL in the dashboard env points to this bridge instance.\n`
+      );
+    }
+  }, 60_000);
 });
