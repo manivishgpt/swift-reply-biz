@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "WhatsApp Baileys bridge for Wapix",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
