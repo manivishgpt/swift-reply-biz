@@ -7,7 +7,7 @@ async function requireBridge() {
   const secret = await getConfig("BRIDGE_SHARED_SECRET");
   if (!baseUrl || !secret) {
     throw new Error(
-      "Bridge is not configured. Open /install and save BRIDGE_BASE_URL and BRIDGE_SHARED_SECRET, then deploy your Baileys bridge.",
+      "Bridge is not configured. Set BRIDGE_BASE_URL and BRIDGE_SHARED_SECRET in your environment / project secrets and deploy your Baileys bridge.",
     );
   }
   return { url: baseUrl.replace(/\/$/, ""), secret };
