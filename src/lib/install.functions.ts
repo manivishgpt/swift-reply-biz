@@ -88,7 +88,10 @@ export const saveInstallSecrets = createServerFn({ method: "POST" })
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: userRes, error } = await supabaseAdmin.auth.getUser(token);
       if (error || !userRes?.user) throw new Error("Forbidden: invalid session.");
-      const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      const { data: isAdmin } = await (supabaseAdmin.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: boolean | null }>)("has_role", {
         _user_id: userRes.user.id,
         _role: "admin",
       });
