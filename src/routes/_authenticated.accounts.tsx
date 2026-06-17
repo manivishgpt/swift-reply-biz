@@ -160,6 +160,11 @@ function AccountCard({ account }: { account: Account }) {
   }
 
   async function disconnect() {
+    if (!window.confirm(
+      `Disconnect "${account.label}"? This logs the WhatsApp session out and wipes its credentials — you'll need to scan a new QR to reconnect.`,
+    )) {
+      return;
+    }
     setBusy("disconnect");
     try {
       await disconnectFn({ data: { accountId: account.id } });
