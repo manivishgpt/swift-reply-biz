@@ -86,13 +86,15 @@ export const Route = createFileRoute("/api/public/wa/message")({
 
         // Auto-reply pipeline (rule engine + AI fallback)
         try {
-          await runAutoReply({
+          if (!parsed.from.endsWith("@g.us")) {
+            await runAutoReply({
             accountId: parsed.accountId,
             conversationId: convRow.id,
             from: parsed.from,
             incomingBody: parsed.body ?? "",
             supabaseAdmin,
-          });
+            });
+          }
         } catch (e) {
           console.error("[auto-reply] failed:", (e as Error).message);
         }
