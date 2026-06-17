@@ -19,6 +19,7 @@ export type Database = {
           account_id: string | null
           created_at: string
           id: string
+          is_master: boolean
           key_hash: string
           key_prefix: string
           label: string
@@ -30,6 +31,7 @@ export type Database = {
           account_id?: string | null
           created_at?: string
           id?: string
+          is_master?: boolean
           key_hash: string
           key_prefix: string
           label: string
@@ -41,6 +43,7 @@ export type Database = {
           account_id?: string | null
           created_at?: string
           id?: string
+          is_master?: boolean
           key_hash?: string
           key_prefix?: string
           label?: string
