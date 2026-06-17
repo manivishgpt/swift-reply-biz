@@ -72,15 +72,6 @@ export const revokeApiKey = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-function generateApiKey() {
-  const { randomBytes, createHash } = require("crypto") as typeof import("crypto");
-  const raw = randomBytes(24).toString("hex");
-  const plaintext = `wapix_${raw}`;
-  const prefix = plaintext.slice(0, 12);
-  const keyHash = createHash("sha256").update(plaintext).digest("hex");
-  return { plaintext, prefix, keyHash };
-}
-
 // Returns info about the user's master API key (creates it on first call).
 // The plaintext is returned ONLY when the key was just created. Otherwise
 // only prefix + metadata is returned (the raw key is never stored).
