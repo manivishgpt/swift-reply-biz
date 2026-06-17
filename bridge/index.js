@@ -10,7 +10,12 @@ import fs from 'fs';
 import path from 'path';
 
 const app = express();
-app.use(express.json());
+// Capture the raw body string so HMAC verification matches exactly what the client signed.
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.length ? buf.toString('utf8') : '';
+  },
+}));
 
 const PORT = process.env.PORT || 3000;
 const BRIDGE_SHARED_SECRET = process.env.BRIDGE_SHARED_SECRET;
@@ -34,7 +39,7 @@ function verifySignature(req, res, next) {
     return res.status(401).send("Unauthorized: Missing signature");
   }
 
-  const bodyStr = req.body ? JSON.stringify(req.body) : '';
+  const bodyStr = req.rawBody ?? '';
   const expected = createHmac('sha256', BRIDGE_SHARED_SECRET).update(bodyStr).digest('hex');
 
   try {
