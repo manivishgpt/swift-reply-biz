@@ -250,10 +250,21 @@ async function generateAiReply(
     console.warn("[auto-reply] LOVABLE_API_KEY missing — skipping AI reply");
     return null;
   }
+  // Use the user-provided system prompt verbatim when set, so custom
+  // instructions (tone, persona, language, response length, etc.) are not
+  // overridden by our defaults. Only fall back to a generic prompt when the
+  // account has no custom prompt configured.
+  const trimmed = systemPrompt?.trim();
   const system =
-    (systemPrompt?.trim() ||
-      "You are a helpful WhatsApp assistant. Reply concisely in the same language as the user.") +
-    "\n\nIMPORTANT: Read the user's latest message carefully and the prior conversation context. Understand intent before replying. Keep the reply short, relevant, and natural — no greetings unless the user greeted first.";
+    trimmed && trimmed.length > 0
+      ? trimmed
+      : "You are a helpful WhatsApp assistant. Read the user's latest message and prior context, understand intent, and reply concisely in the same language as the user.";
+  console.log("[auto-reply] generating", {
+    customPrompt: !!trimmed,
+    promptLen: trimmed?.length ?? 0,
+    historyLen: history.length,
+    userTextLen: userText.length,
+  });
 
   // Ensure last message is the current user text (avoid duplicate if history already contains it)
   const msgs = [...history];
