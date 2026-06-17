@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CORS_HEADERS, corsPreflight, withCors } from "@/lib/public-api-cors";
 
 // Lightweight "login" check — clients POST with Authorization: Bearer wapix_…
 // and get back the account info if the key is valid. Useful to validate stored
@@ -6,13 +7,14 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/v1/auth/verify")({
   server: {
     handlers: {
+      OPTIONS: async () => corsPreflight(),
       POST: async ({ request }) => {
         const header = request.headers.get("authorization") ?? "";
         const match = header.match(/^Bearer\s+(.+)$/i);
         if (!match) {
           return new Response(
             JSON.stringify({ ok: false, error: "missing_token" }),
-            { status: 401, headers: { "Content-Type": "application/json" } },
+            { status: 401, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
           );
         }
         const plaintext = match[1].trim();
@@ -29,18 +31,18 @@ export const Route = createFileRoute("/api/public/v1/auth/verify")({
         if (!data || data.revoked_at) {
           return new Response(
             JSON.stringify({ ok: false, error: "invalid_or_revoked" }),
-            { status: 401, headers: { "Content-Type": "application/json" } },
+            { status: 401, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
           );
         }
 
-        return Response.json({
+        return withCors(Response.json({
           ok: true,
           key: { id: data.id, label: data.label, prefix: data.key_prefix },
           account: {
             id: data.account_id,
             ...(data.wa_accounts as object | null),
           },
-        });
+        }));
       },
     },
   },
