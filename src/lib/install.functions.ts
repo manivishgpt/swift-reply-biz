@@ -151,3 +151,55 @@ export const createFirstAdmin = createServerFn({ method: "POST" })
     }
     return { ok: true, userId, email: data.email };
   });
+
+/* -------------------- Supabase credentials validation -------------------- */
+// Self-host bootstrap step: verify the URL + anon key + service role key the
+// operator plans to put into their hosting platform's env vars actually work.
+// We do NOT persist these — the app's Supabase client is created from
+// process.env at startup, so they must live in the host environment.
+const SupabaseSchema = z.object({
+  url: z.string().trim().url(),
+  anonKey: z.string().trim().min(20),
+  serviceRoleKey: z.string().trim().min(20).optional().or(z.literal("")),
+});
+
+export const validateSupabaseCreds = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => SupabaseSchema.parse(data))
+  .handler(async ({ data }) => {
+    const base = data.url.replace(/\/$/, "");
+    const out = {
+      urlReachable: false,
+      anonKeyValid: false,
+      serviceRoleKeyValid: false as boolean | null,
+      error: null as string | null,
+    };
+    try {
+      const r = await fetch(`${base}/auth/v1/health`, {
+        headers: { apikey: data.anonKey },
+      });
+      out.urlReachable = r.ok || r.status === 404 || r.status === 401;
+      out.anonKeyValid = r.status !== 401 && r.status !== 403;
+    } catch (e) {
+      out.error = e instanceof Error ? e.message : "Unreachable";
+      return out;
+    }
+    if (data.serviceRoleKey && data.serviceRoleKey.length > 0) {
+      try {
+        // Service role can hit the admin users endpoint; anon cannot.
+        const r = await fetch(`${base}/auth/v1/admin/users?per_page=1`, {
+          headers: {
+            apikey: data.serviceRoleKey,
+            Authorization: `Bearer ${data.serviceRoleKey}`,
+          },
+        });
+        out.serviceRoleKeyValid = r.ok;
+        if (!r.ok && !out.error) out.error = `Service role check returned ${r.status}`;
+      } catch (e) {
+        out.serviceRoleKeyValid = false;
+        out.error = e instanceof Error ? e.message : "Service role unreachable";
+      }
+    } else {
+      out.serviceRoleKeyValid = null;
+    }
+    return out;
+  });
