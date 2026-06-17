@@ -16,33 +16,47 @@ export type Database = {
     Tables: {
       api_keys: {
         Row: {
+          account_id: string | null
           created_at: string
           id: string
           key_hash: string
           key_prefix: string
           label: string
           last_used_at: string | null
+          revoked_at: string | null
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           created_at?: string
           id?: string
           key_hash: string
           key_prefix: string
           label: string
           last_used_at?: string | null
+          revoked_at?: string | null
           user_id: string
         }
         Update: {
+          account_id?: string | null
           created_at?: string
           id?: string
           key_hash?: string
           key_prefix?: string
           label?: string
           last_used_at?: string | null
+          revoked_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "wa_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       broadcast_recipients: {
         Row: {

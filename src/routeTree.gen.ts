@@ -23,6 +23,8 @@ import { Route as AuthenticatedContactsIdRouteImport } from './routes/_authentic
 import { Route as ApiPublicWaStatusRouteImport } from './routes/api/public/wa/status'
 import { Route as ApiPublicWaMessageRouteImport } from './routes/api/public/wa/message'
 import { Route as ApiPublicWaDeliveryRouteImport } from './routes/api/public/wa/delivery'
+import { Route as ApiPublicV1MessagesRouteImport } from './routes/api/public/v1/messages'
+import { Route as ApiPublicV1AuthVerifyRouteImport } from './routes/api/public/v1/auth.verify'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -93,6 +95,16 @@ const ApiPublicWaDeliveryRoute = ApiPublicWaDeliveryRouteImport.update({
   path: '/api/public/wa/delivery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1MessagesRoute = ApiPublicV1MessagesRouteImport.update({
+  id: '/api/public/v1/messages',
+  path: '/api/public/v1/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1AuthVerifyRoute = ApiPublicV1AuthVerifyRouteImport.update({
+  id: '/api/public/v1/auth/verify',
+  path: '/api/public/v1/auth/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -105,9 +117,11 @@ export interface FileRoutesByFullPath {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
+  '/api/public/v1/auth/verify': typeof ApiPublicV1AuthVerifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -120,9 +134,11 @@ export interface FileRoutesByTo {
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
+  '/api/public/v1/auth/verify': typeof ApiPublicV1AuthVerifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -137,9 +153,11 @@ export interface FileRoutesById {
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/contacts/$id': typeof AuthenticatedContactsIdRoute
+  '/api/public/v1/messages': typeof ApiPublicV1MessagesRoute
   '/api/public/wa/delivery': typeof ApiPublicWaDeliveryRoute
   '/api/public/wa/message': typeof ApiPublicWaMessageRoute
   '/api/public/wa/status': typeof ApiPublicWaStatusRoute
+  '/api/public/v1/auth/verify': typeof ApiPublicV1AuthVerifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -154,9 +172,11 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
+    | '/api/public/v1/auth/verify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -169,9 +189,11 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/contacts/$id'
+    | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
+    | '/api/public/v1/auth/verify'
   id:
     | '__root__'
     | '/'
@@ -185,18 +207,22 @@ export interface FileRouteTypes {
     | '/_authenticated/rules'
     | '/_authenticated/settings'
     | '/_authenticated/contacts/$id'
+    | '/api/public/v1/messages'
     | '/api/public/wa/delivery'
     | '/api/public/wa/message'
     | '/api/public/wa/status'
+    | '/api/public/v1/auth/verify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicV1MessagesRoute: typeof ApiPublicV1MessagesRoute
   ApiPublicWaDeliveryRoute: typeof ApiPublicWaDeliveryRoute
   ApiPublicWaMessageRoute: typeof ApiPublicWaMessageRoute
   ApiPublicWaStatusRoute: typeof ApiPublicWaStatusRoute
+  ApiPublicV1AuthVerifyRoute: typeof ApiPublicV1AuthVerifyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -299,6 +325,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWaDeliveryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/messages': {
+      id: '/api/public/v1/messages'
+      path: '/api/public/v1/messages'
+      fullPath: '/api/public/v1/messages'
+      preLoaderRoute: typeof ApiPublicV1MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/auth/verify': {
+      id: '/api/public/v1/auth/verify'
+      path: '/api/public/v1/auth/verify'
+      fullPath: '/api/public/v1/auth/verify'
+      preLoaderRoute: typeof ApiPublicV1AuthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -343,9 +383,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicV1MessagesRoute: ApiPublicV1MessagesRoute,
   ApiPublicWaDeliveryRoute: ApiPublicWaDeliveryRoute,
   ApiPublicWaMessageRoute: ApiPublicWaMessageRoute,
   ApiPublicWaStatusRoute: ApiPublicWaStatusRoute,
+  ApiPublicV1AuthVerifyRoute: ApiPublicV1AuthVerifyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

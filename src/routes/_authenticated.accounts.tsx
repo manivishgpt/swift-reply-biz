@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Phone, RefreshCw, Power } from "lucide-react";
+import { Plus, Phone, RefreshCw, Power, Key, Copy, Trash2 } from "lucide-react";
 import { createAccount, requestQr, disconnectAccount, updateAccountSettings } from "@/lib/accounts.functions";
+import { createApiKey, listApiKeys, revokeApiKey } from "@/lib/api-keys.functions";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
@@ -247,6 +248,7 @@ function AccountCard({ account }: { account: Account }) {
         <Button size="sm" variant="ghost" onClick={() => setExpanded(!expanded)}>
           {expanded ? "Hide" : "Settings"}
         </Button>
+        <ApiKeysButton accountId={account.id} accountLabel={account.label} />
       </div>
 
       {qr && account.status !== "connected" && (
@@ -295,5 +297,125 @@ function AccountCard({ account }: { account: Account }) {
         </div>
       )}
     </Card>
+  );
+}
+
+function ApiKeysButton({ accountId, accountLabel }: { accountId: string; accountLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [keys, setKeys] = useState<Array<{ id: string; label: string; key_prefix: string; last_used_at: string | null; revoked_at: string | null; created_at: string }>>([]);
+  const [newlyCreated, setNewlyCreated] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const createFn = useServerFn(createApiKey);
+  const listFn = useServerFn(listApiKeys);
+  const revokeFn = useServerFn(revokeApiKey);
+
+  async function refresh() {
+    try {
+      const rows = await listFn({ data: { accountId } });
+      setKeys(rows as typeof keys);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load keys");
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
+      setNewlyCreated(null);
+      refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  async function create() {
+    if (!label.trim()) return;
+    setBusy(true);
+    try {
+      const res = await createFn({ data: { accountId, label: label.trim() } });
+      setNewlyCreated(res.key);
+      setLabel("");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revoke(id: string) {
+    if (!window.confirm("Revoke this API key? Clients using it will stop working immediately.")) return;
+    try {
+      await revokeFn({ data: { id } });
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
+
+  function copy(text: string) {
+    navigator.clipboard.writeText(text).then(() => toast.success("Copied"));
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost"><Key className="mr-2 h-4 w-4" />API keys</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>API keys — {accountLabel}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs">
+            <p className="font-medium">Send a WhatsApp message via API</p>
+            <pre className="mt-2 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+{`curl -X POST ${typeof window !== "undefined" ? window.location.origin : ""}/api/public/v1/messages \\
+  -H "Authorization: Bearer wapix_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{"to":"919876543210","body":"Hi from API"}'`}
+            </pre>
+            <p className="mt-2 text-muted-foreground">Verify a key: <code>POST /api/public/v1/auth/verify</code> with the same <code>Authorization</code> header.</p>
+          </div>
+
+          <div className="flex gap-2">
+            <Input placeholder="Key label (e.g. n8n production)" value={label} onChange={(e) => setLabel(e.target.value)} />
+            <Button onClick={create} disabled={busy || !label.trim()}>Generate</Button>
+          </div>
+
+          {newlyCreated && (
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <p className="text-xs font-medium text-primary">Copy this key now — it won't be shown again.</p>
+              <div className="mt-2 flex items-center gap-2">
+                <code className="flex-1 break-all rounded bg-background p-2 text-xs">{newlyCreated}</code>
+                <Button size="sm" variant="outline" onClick={() => copy(newlyCreated)}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {keys.length === 0 && <p className="text-sm text-muted-foreground">No API keys yet.</p>}
+            {keys.map((k) => (
+              <div key={k.id} className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
+                <div>
+                  <div className="font-medium">{k.label}{k.revoked_at && <Badge className="ml-2 bg-destructive/15 text-destructive">revoked</Badge>}</div>
+                  <div className="text-xs text-muted-foreground">
+                    <code>{k.key_prefix}…</code> · {k.last_used_at ? `last used ${new Date(k.last_used_at).toLocaleString()}` : "never used"}
+                  </div>
+                </div>
+                {!k.revoked_at && (
+                  <Button size="sm" variant="ghost" onClick={() => revoke(k.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
