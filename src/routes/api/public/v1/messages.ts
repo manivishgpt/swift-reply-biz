@@ -6,6 +6,9 @@ const SendSchema = z.object({
   to: z.string().trim().min(6).max(20),
   body: z.string().trim().min(1).max(4096),
   type: z.literal("text").optional(),
+  // Required when using a master (user-scoped) API key.
+  // Ignored when the key is already bound to an account.
+  account_id: z.string().uuid().optional(),
 });
 
 function jsonError(status: number, code: string, message: string) {
@@ -30,13 +33,12 @@ async function authenticate(request: Request) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("api_keys")
-    .select("id, account_id, revoked_at")
+    .select("id, user_id, account_id, revoked_at, is_master")
     .eq("key_hash", keyHash)
     .maybeSingle();
   if (error) return { error: jsonError(500, "auth_error", error.message) };
   if (!data) return { error: jsonError(401, "invalid_token", "API key not recognized") };
   if (data.revoked_at) return { error: jsonError(401, "revoked", "API key has been revoked") };
-  if (!data.account_id) return { error: jsonError(401, "no_account", "API key not linked to an account") };
 
   // Fire-and-forget last_used_at update.
   void supabaseAdmin
@@ -44,7 +46,12 @@ async function authenticate(request: Request) {
     .update({ last_used_at: new Date().toISOString() })
     .eq("id", data.id);
 
-  return { accountId: data.account_id, apiKeyId: data.id };
+  return {
+    accountId: data.account_id as string | null,
+    userId: data.user_id as string,
+    apiKeyId: data.id,
+    isMaster: Boolean(data.is_master),
+  };
 }
 
 function normalizePhone(raw: string): string {
@@ -66,24 +73,46 @@ export const Route = createFileRoute("/api/public/v1/messages")({
           return jsonError(400, "bad_request", e instanceof Error ? e.message : "Invalid body");
         }
 
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Resolve which WhatsApp account to send from.
+        let accountId = auth.accountId;
+        if (!accountId) {
+          if (!payload.account_id) {
+            return jsonError(
+              400,
+              "account_required",
+              "Master API keys must specify 'account_id' in the body (the WhatsApp account to send from)",
+            );
+          }
+          // Verify the master key owns this account.
+          const { data: owned } = await supabaseAdmin
+            .from("wa_accounts")
+            .select("id, created_by")
+            .eq("id", payload.account_id)
+            .maybeSingle();
+          if (!owned || owned.created_by !== auth.userId) {
+            return jsonError(403, "forbidden", "API key does not own this account");
+          }
+          accountId = payload.account_id;
+        }
+
         const phone = normalizePhone(payload.to);
         if (phone.length < 6) return jsonError(400, "bad_request", "Invalid phone number");
         const waJid = `${phone}@s.whatsapp.net`;
-
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Upsert contact + conversation.
         const { data: existingContact } = await supabaseAdmin
           .from("contacts")
           .select("id")
-          .eq("account_id", auth.accountId)
+          .eq("account_id", accountId)
           .eq("wa_jid", waJid)
           .maybeSingle();
         let contactId = existingContact?.id;
         if (!contactId) {
           const { data: ins, error } = await supabaseAdmin
             .from("contacts")
-            .insert({ account_id: auth.accountId, wa_jid: waJid, phone })
+            .insert({ account_id: accountId, wa_jid: waJid, phone })
             .select("id")
             .single();
           if (error) return jsonError(500, "db_error", error.message);
@@ -93,14 +122,14 @@ export const Route = createFileRoute("/api/public/v1/messages")({
         const { data: existingConv } = await supabaseAdmin
           .from("conversations")
           .select("id")
-          .eq("account_id", auth.accountId)
+          .eq("account_id", accountId)
           .eq("contact_id", contactId)
           .maybeSingle();
         let conversationId = existingConv?.id;
         if (!conversationId) {
           const { data: ins, error } = await supabaseAdmin
             .from("conversations")
-            .insert({ account_id: auth.accountId, contact_id: contactId })
+            .insert({ account_id: accountId, contact_id: contactId })
             .select("id")
             .single();
           if (error) return jsonError(500, "db_error", error.message);
@@ -122,7 +151,7 @@ export const Route = createFileRoute("/api/public/v1/messages")({
 
         try {
           const { bridge } = await import("@/lib/bridge.server");
-          const result = await bridge.send(auth.accountId, {
+          const result = await bridge.send(accountId, {
             to: waJid,
             type: "text",
             body: payload.body,
