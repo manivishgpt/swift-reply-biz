@@ -165,6 +165,134 @@ function EmptyThread() {
   );
 }
 
+type WaAccountRow = { id: string; label: string; status: string; phone: string | null };
+
+function NewChatDialog({ onCreated }: { onCreated: (conversationId: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [accountId, setAccountId] = useState<string>("");
+  const [phone, setPhone] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const startFn = useServerFn(startConversation);
+
+  const accounts = useQuery({
+    queryKey: ["wa_accounts", "connected"],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wa_accounts")
+        .select("id, label, status, phone")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as WaAccountRow[];
+    },
+  });
+
+  useEffect(() => {
+    if (open && !accountId && accounts.data && accounts.data.length > 0) {
+      const connected = accounts.data.find((a) => a.status === "connected");
+      setAccountId((connected ?? accounts.data[0]).id);
+    }
+  }, [open, accounts.data, accountId]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accountId || !phone.trim() || !body.trim() || busy) return;
+    setBusy(true);
+    try {
+      const res = await startFn({
+        data: {
+          accountId,
+          phone: phone.trim(),
+          body: body.trim(),
+          displayName: displayName.trim() || undefined,
+        },
+      });
+      toast.success("Message sent");
+      setOpen(false);
+      setPhone("");
+      setDisplayName("");
+      setBody("");
+      onCreated(res.conversationId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Plus className="mr-1 h-4 w-4" /> New
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New chat</DialogTitle>
+          <DialogDescription>
+            Send a WhatsApp message to any number. We'll create the conversation automatically.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>WhatsApp account</Label>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder={accounts.isLoading ? "Loading…" : "Select an account"} />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.data?.map((a) => (
+                  <SelectItem key={a.id} value={a.id} disabled={a.status !== "connected"}>
+                    {a.label} {a.phone ? `· ${a.phone}` : ""} {a.status !== "connected" ? `(${a.status})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Phone number (with country code)</Label>
+            <Input
+              placeholder="e.g. 919876543210"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              inputMode="tel"
+            />
+            <p className="text-[11px] text-muted-foreground">Digits only — no +, spaces or dashes needed.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Name (optional)</Label>
+            <Input
+              placeholder="John Doe"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Message</Label>
+            <Textarea
+              placeholder="Hi 👋"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy || !accountId || !phone.trim() || !body.trim()}>
+              {busy ? "Sending…" : "Send"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Thread({ conversationId }: { conversationId: string }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
