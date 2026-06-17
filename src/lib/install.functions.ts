@@ -81,8 +81,8 @@ export const saveInstallSecrets = createServerFn({ method: "POST" })
     const admins = await countAdmins();
     if (admins > 0) {
       // Lock down after first admin: require authenticated admin.
-      const { getRequestHeader } = await import("@tanstack/react-start/server");
-      const auth = getRequestHeader("authorization") ?? "";
+      const { getRequest } = await import("@tanstack/react-start/server");
+      const auth = getRequest()?.headers?.get("authorization") ?? "";
       const token = auth.replace(/^Bearer\s+/i, "");
       if (!token) throw new Error("Forbidden: install is locked. Sign in as admin.");
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
