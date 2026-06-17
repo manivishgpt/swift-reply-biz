@@ -164,6 +164,11 @@ async function sendWebhook(endpoint, payload) {
 // Initialize/Start a WhatsApp Baileys session
 async function startWhatsAppSession(accountId, { reset = false } = {}) {
   if (reset && sessions[accountId]) {
+    console.warn(
+      `[startWhatsAppSession] reset=true → calling sock.logout() for ${accountId}. ` +
+        `This will disconnect the existing WhatsApp session and wipe credentials. ` +
+        `Triggered by POST /sessions with reset:true (NOT by DELETE).`,
+    );
     try { await sessions[accountId].sock.logout(); } catch {}
     try { sessions[accountId].sock.end?.(); } catch {}
     delete sessions[accountId];
@@ -385,6 +390,10 @@ app.get('/sessions/:accountId/status', verifySignature, (req, res) => {
 // 4. Logout / Delete session
 app.delete('/sessions/:accountId', verifySignature, async (req, res) => {
   const { accountId } = req.params;
+  console.warn(
+    `[DELETE /sessions/${accountId}] received — about to call sock.logout() and wipe session. ` +
+      `Caller IP: ${req.ip}  UA: ${req.headers['user-agent'] ?? '(none)'}`,
+  );
   const session = sessions[accountId];
   if (!session) return res.json({ ok: true, status: 'already_deleted' });
 
