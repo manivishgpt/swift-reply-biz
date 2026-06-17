@@ -14,7 +14,7 @@ export const Route = createFileRoute("/api/public/wa/status")({
       POST: async ({ request }) => {
         const raw = await request.text();
         const { verifyWebhookSignature } = await import("@/lib/bridge.server");
-        if (!verifyWebhookSignature(raw, request.headers.get("x-wapix-signature"))) {
+        if (!(await verifyWebhookSignature(raw, request.headers.get("x-wapix-signature")))) {
           return new Response("Invalid signature", { status: 401 });
         }
         let parsed;
