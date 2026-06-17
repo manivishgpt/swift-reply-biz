@@ -29,6 +29,7 @@ if (!BRIDGE_SHARED_SECRET) {
 // In-memory active sockets and QR states
 const sessions = {};
 const logger = pino({ level: 'info' });
+let sendEndpointHitCount = 0;
 
 // Verify incoming request signature from Wapix dashboard
 function verifySignature(req, res, next) {
@@ -312,6 +313,7 @@ app.post('/sessions/:accountId/send', verifySignature, async (req, res) => {
   const { accountId } = req.params;
   const { to, type, body, mediaUrl } = req.body;
   const reqTs = new Date().toISOString();
+  sendEndpointHitCount++;
 
   console.log(
     `\n[SEND REQUEST] ${reqTs}\n` +
