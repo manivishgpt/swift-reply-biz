@@ -31,6 +31,12 @@ const sessions = {};
 const logger = pino({ level: 'info' });
 let sendEndpointHitCount = 0;
 
+// Global request tracer — logs EVERY hit, even before signature verification.
+app.use((req, _res, next) => {
+  console.log(`[HTTP IN] ${req.method} ${req.path}`);
+  next();
+});
+
 // Verify incoming request signature from Wapix dashboard
 function verifySignature(req, res, next) {
   const signature = req.headers['x-wapix-signature'];
@@ -186,12 +192,14 @@ async function startWhatsAppSession(accountId, { reset = false } = {}) {
   // Handle incoming messages
   sock.ev.on('messages.upsert', async (m) => {
     console.log(`[messages.upsert] account=${accountId} type=${m.type} count=${m.messages?.length ?? 0}`);
-    if (m.type !== 'notify') return;
-
     for (const msg of m.messages) {
       if (msg.key.fromMe) {
-        console.log(`[messages.upsert] skip fromMe id=${msg.key.id}`);
+        console.log(`[messages.upsert] skip fromMe to=${msg.key.remoteJid} id=${msg.key.id}`);
         continue;
+      }
+      if (m.type !== 'notify') {
+        console.log(`[messages.upsert] non-notify type=${m.type} from=${msg.key.remoteJid} id=${msg.key.id} keys=${Object.keys(msg.message ?? {}).join(',') || '(none)'}`);
+        // still continue to log/forward so we can see history-sync or append events
       }
 
       const from = msg.key.remoteJid;
@@ -202,18 +210,52 @@ async function startWhatsAppSession(accountId, { reset = false } = {}) {
       let type = 'text';
       let mediaUrl = null;
 
-      if (msg.message?.conversation) {
-        body = msg.message.conversation;
-      } else if (msg.message?.extendedTextMessage?.text) {
-        body = msg.message.extendedTextMessage.text;
-      } else if (msg.message?.imageMessage) {
+      // Unwrap ephemeral / viewOnce wrappers so we read the real payload.
+      const inner =
+        msg.message?.ephemeralMessage?.message ||
+        msg.message?.viewOnceMessage?.message ||
+        msg.message?.viewOnceMessageV2?.message ||
+        msg.message?.viewOnceMessageV2Extension?.message ||
+        msg.message ||
+        {};
+
+      if (inner.conversation) {
+        body = inner.conversation;
+      } else if (inner.extendedTextMessage?.text) {
+        body = inner.extendedTextMessage.text;
+      } else if (inner.imageMessage) {
         type = 'image';
-        body = msg.message.imageMessage.caption || '';
-        // Note: Real media download and host is out-of-scope for simple bridge templates. 
-        // A production implementation would download from Baileys & upload to S3/Cloud Storage.
+        body = inner.imageMessage.caption || '[image]';
+      } else if (inner.videoMessage) {
+        type = 'video';
+        body = inner.videoMessage.caption || '[video]';
+      } else if (inner.audioMessage) {
+        type = 'audio';
+        body = inner.audioMessage.ptt ? '[voice note]' : '[audio]';
+      } else if (inner.documentMessage) {
+        type = 'document';
+        body = inner.documentMessage.fileName
+          ? `[document] ${inner.documentMessage.fileName}${inner.documentMessage.caption ? ' — ' + inner.documentMessage.caption : ''}`
+          : '[document]';
+      } else if (inner.stickerMessage) {
+        type = 'sticker';
+        body = '[sticker]';
+      } else if (inner.locationMessage) {
+        type = 'location';
+        body = `[location] ${inner.locationMessage.degreesLatitude},${inner.locationMessage.degreesLongitude}`;
+      } else if (inner.contactMessage) {
+        type = 'contact';
+        body = `[contact] ${inner.contactMessage.displayName ?? ''}`;
+      } else if (inner.buttonsResponseMessage) {
+        body = inner.buttonsResponseMessage.selectedDisplayText || inner.buttonsResponseMessage.selectedButtonId || '[button response]';
+      } else if (inner.listResponseMessage) {
+        body = inner.listResponseMessage.title || inner.listResponseMessage.singleSelectReply?.selectedRowId || '[list response]';
+      } else if (inner.reactionMessage) {
+        type = 'system';
+        body = `[reaction] ${inner.reactionMessage.text ?? ''}`;
       } else {
         type = 'system';
-        body = '[Other Message Type]';
+        body = `[unknown type] keys=${Object.keys(inner).join(',') || '(empty)'}`;
       }
 
       const isGroup = from.endsWith('@g.us');
