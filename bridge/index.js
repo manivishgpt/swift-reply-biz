@@ -429,18 +429,15 @@ app.post('/sessions/:accountId/send', verifySignature, async (req, res) => {
   }
 
   const fromPhone = session.phone || '(unknown)';
-  console.log(
-    `\n========================\n` +
-    `OUTGOING MESSAGE\n` +
-    `================\n\n` +
-    `Account ID : ${accountId}\n` +
-    `From Phone : ${fromPhone}\n` +
-    `To         : ${to}\n` +
-    `Type       : ${type}\n` +
-    `Message    : ${(body ?? '').slice(0, 1000)}\n` +
-    `Time       : ${reqTs}\n` +
-    `=================================\n`
-  );
+  const toPhone = (to || '').split('@')[0];
+  logOutgoingMessage({
+    accountId,
+    fromPhone,
+    toPhone,
+    type,
+    body,
+    ts: reqTs,
+  });
 
   try {
     console.log(`[bridge] -> calling sendMessage to=${to} type=${type}`);
