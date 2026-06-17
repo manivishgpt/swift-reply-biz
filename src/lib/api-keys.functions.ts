@@ -98,7 +98,10 @@ export const getMasterApiKey = createServerFn({ method: "POST" })
       return { plaintext: pt, prefix: pt.slice(0, 12), keyHash: c.createHash("sha256").update(pt).digest("hex") };
     });
 
-    const { data: ins, error } = await supabase
+    // Master keys are inserted with service role: RLS forbids is_master inserts
+    // from the authenticated client (prevents privilege escalation via direct DB writes).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ins, error } = await supabaseAdmin
       .from("api_keys")
       .insert({
         user_id: userId,
@@ -119,9 +122,10 @@ export const getMasterApiKey = createServerFn({ method: "POST" })
 export const resetMasterApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const nowIso = new Date().toISOString();
-    const { error: revErr } = await supabase
+    const { error: revErr } = await supabaseAdmin
       .from("api_keys")
       .update({ revoked_at: nowIso })
       .eq("user_id", userId)
@@ -135,7 +139,7 @@ export const resetMasterApiKey = createServerFn({ method: "POST" })
     const prefix = plaintext.slice(0, 12);
     const keyHash = c.createHash("sha256").update(plaintext).digest("hex");
 
-    const { data: ins, error } = await supabase
+    const { data: ins, error } = await supabaseAdmin
       .from("api_keys")
       .insert({
         user_id: userId,
