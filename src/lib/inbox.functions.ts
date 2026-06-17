@@ -14,6 +14,7 @@ export const sendMessage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    console.log("[sendMessage] start", { conversationId: data.conversationId, userId, bodyLen: data.body.length });
 
     // Load conversation + account
     const { data: conv, error: convErr } = await supabase
@@ -21,11 +22,13 @@ export const sendMessage = createServerFn({ method: "POST" })
       .select("id, account_id, contact_id, contacts(wa_jid)")
       .eq("id", data.conversationId)
       .maybeSingle();
-    if (convErr) throw new Error(convErr.message);
-    if (!conv) throw new Error("Conversation not found");
+    if (convErr) { console.error("[sendMessage] conv load error", convErr); throw new Error(convErr.message); }
+    if (!conv) { console.error("[sendMessage] conversation not found", data.conversationId); throw new Error("Conversation not found"); }
 
     const waJid = (conv as { contacts: { wa_jid: string } | null }).contacts?.wa_jid;
-    if (!waJid) throw new Error("Contact has no WhatsApp JID");
+    const accountId = (conv as { account_id: string }).account_id;
+    console.log("[sendMessage] resolved", { accountId, waJid });
+    if (!waJid) { console.error("[sendMessage] missing wa_jid"); throw new Error("Contact has no WhatsApp JID"); }
 
     // Insert pending message
     const { data: msg, error: insErr } = await supabase
@@ -40,21 +43,25 @@ export const sendMessage = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (insErr) throw new Error(insErr.message);
+    if (insErr) { console.error("[sendMessage] insert pending failed", insErr); throw new Error(insErr.message); }
+    console.log("[sendMessage] pending message inserted", { messageId: msg.id });
 
     // Send via bridge
     try {
       const { bridge } = await import("./bridge.server");
-      const result = await bridge.send((conv as { account_id: string }).account_id, {
+      console.log("[sendMessage] calling bridge.send", { accountId, to: waJid, type: "text" });
+      const result = await bridge.send(accountId, {
         to: waJid,
         type: "text",
         body: data.body,
       });
+      console.log("[sendMessage] bridge.send OK", { wa_message_id: result.wa_message_id });
       await supabase
         .from("messages")
         .update({ status: "sent", wa_message_id: result.wa_message_id })
         .eq("id", msg.id);
     } catch (e) {
+      console.error("[sendMessage] bridge.send FAILED", e instanceof Error ? { name: e.name, message: e.message, stack: e.stack } : e);
       await supabase
         .from("messages")
         .update({ status: "failed" })
