@@ -7,7 +7,7 @@ export const getInstallStatus = createServerFn({ method: "GET" }).handler(async 
     bridgeBaseUrl: Boolean(process.env.BRIDGE_BASE_URL),
     bridgeSharedSecret: Boolean(process.env.BRIDGE_SHARED_SECRET),
     webhookSecret: Boolean(process.env.WEBHOOK_SECRET),
-    lovableApiKey: Boolean(process.env.LOVABLE_API_KEY),
+    openRouterApiKey: Boolean(process.env.OPENROUTER_API_KEY),
     supabaseUrl: Boolean(process.env.SUPABASE_URL),
   };
 
